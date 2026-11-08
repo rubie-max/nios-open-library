@@ -463,7 +463,7 @@
         else if (/book/i.test(label)) label = "Full Book PDF";
         if (seen[label]) return;
         seen[label] = 1;
-        var eb = ext(x[1], "extra-btn" + (/Paper/.test(label) ? " good" : ""));
+        var eb = ext(x[1], "extra-btn");
         eb.appendChild(icon("file"));
         eb.appendChild(document.createTextNode(label));
         extras.appendChild(eb);
