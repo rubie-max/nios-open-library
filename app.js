@@ -632,16 +632,27 @@
       btn.appendChild(document.createTextNode(f[1]));
       btn.setAttribute("aria-pressed", String(activeFilter === f[0]));
       btn.addEventListener("click", function () {
-        if (isLab) labFilter = f[0]; else paperFilter = f[0];
+        if (isLab) {
+          labFilter = f[0];
+        } else {
+          paperFilter = f[0];
+          paperYearFilter = "all";
+        }
         route();
       });
       chips.appendChild(btn);
     });
     app.appendChild(chips);
 
-    if (!isLab) {
+    var yearFilterEnabled = !isLab && (activeFilter === "question" || activeFilter === "sample");
+    if (yearFilterEnabled) {
       var years = {};
-      entries.forEach(function (entry) { years[resourceYear(entry.x[0])] = true; });
+      entries.forEach(function (entry) {
+        var matchesCategory = activeFilter === "question"
+          ? /question/i.test(entry.x[0])
+          : /sample/i.test(entry.x[0]);
+        if (matchesCategory) years[resourceYear(entry.x[0])] = true;
+      });
       var yearKeys = Object.keys(years).filter(function (y) { return y !== "other"; }).sort(function (a, b) {
         if (a === "current") return -1;
         if (b === "current") return 1;
@@ -671,7 +682,7 @@
       if (activeFilter === "book") return /book/i.test(entry.x[0]);
       return true;
     });
-    if (!isLab && paperYearFilter !== "all") {
+    if (yearFilterEnabled && paperYearFilter !== "all") {
       entries = entries.filter(function (entry) { return resourceYear(entry.x[0]) === paperYearFilter; });
     }
 
