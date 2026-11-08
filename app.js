@@ -281,43 +281,152 @@
   /* ========================================================================
      COURSE LEVEL VIEW (Secondary 10th / Senior Secondary 12th)
      ======================================================================== */
-  var currentMed = load("nios-medium", "All");
-  function subjectRow(b) {
-    var a = internal("#/book/" + encodeURIComponent(b.id), "subj-row");
-    var col = subjColor(b.t);
-    a.style.setProperty("--c", col);
-    var cd = el("span", "subj-code");
-    cd.appendChild(el("small", null, "Code"));
-    cd.appendChild(el("span", null, b.code));
-    a.appendChild(cd);
+  var levelMedium = load("nios-level-medium", "English");
+  var levelSubject = "All";
+  var currentSubjectTab = load("nios-subject-tab", "all");
+  var languageCodes = ["201", "202", "203", "204", "205", "206", "207", "208", "209", "210", "228", "231", "232", "233", "235", "236", "237", "238", "301", "302", "303", "304", "305", "306", "307", "309", "310", "341", "342"];
 
-    var mid = el("div", "subj-mid");
-    mid.appendChild(el("b", null, b.t));
-    mid.appendChild(el("small", null, b.m + " · " + b.ch.length + (b.ch.length === 1 ? " lesson" : " lessons")));
-    var tags = el("div", "subj-tags");
-    var hasVid = b.ch.some(function (c) { return c[2]; });
-    var hasSol = b.ch.some(function (c) { return c[3]; });
-    if (hasSol) tags.appendChild(el("span", "stag good", "Solutions"));
-    if (hasVid) tags.appendChild(el("span", "stag", "Videos"));
-    if (b.extra && b.extra.length) {
-      var seen = {};
-      b.extra.forEach(function (x) {
-        var lbl = /question paper/i.test(x[0]) ? "Question Paper" : /sample/i.test(x[0]) ? "Sample Paper" : /tma|assignment/i.test(x[0]) ? "TMA" : /lab|manual/i.test(x[0]) ? "Lab Manual" : "";
-        if (!lbl || seen[lbl]) return;
-        seen[lbl] = 1;
-        tags.appendChild(el("span", "stag" + (/Paper/.test(lbl) ? " good" : ""), lbl));
+  function mediumGlyph(m) {
+    var glyphs = { English: "Aa", Hindi: "अ", Urdu: "ا", Bengali: "বা", Marathi: "म", Telugu: "తె", Gujarati: "ગ", Kannada: "ಕ", Sanskrit: "सं", Punjabi: "ਪ", Tamil: "த" };
+    return m === "All" ? "文" : (glyphs[m] || String(m).slice(0, 2));
+  }
+
+  function openMediumSheet(mediums, books) {
+    var dlg = el("dialog", "sheet medium-sheet");
+    var head = el("div", "sheet-head");
+    head.appendChild(el("h2", null, "Choose medium"));
+    var close = el("button", "sheet-x", "✕");
+    close.type = "button";
+    close.setAttribute("aria-label", "Close");
+    close.addEventListener("click", function () { dlg.close(); });
+    head.appendChild(close);
+    dlg.appendChild(head);
+    var grid = el("div", "medium-grid");
+    ["All"].concat(mediums).forEach(function (m) {
+      var count = m === "All" ? books.length : books.filter(function (b) { return b.m === m; }).length;
+      var btn = el("button", "medium-option");
+      btn.type = "button";
+      btn.setAttribute("aria-pressed", String(m === levelMedium));
+      btn.appendChild(el("span", "medium-glyph", mediumGlyph(m)));
+      var txt = el("span", "medium-option-text");
+      txt.appendChild(el("b", null, m === "All" ? "All languages" : m));
+      txt.appendChild(el("small", null, count + (count === 1 ? " book" : " books")));
+      btn.appendChild(txt);
+      if (m === levelMedium) btn.appendChild(icon("check"));
+      btn.addEventListener("click", function () {
+        levelMedium = m;
+        levelSubject = "All";
+        save("nios-level-medium", m);
+        dlg.close();
+        route();
       });
-    }
-    if (tags.childNodes.length) mid.appendChild(tags);
-    a.appendChild(mid);
+      grid.appendChild(btn);
+    });
+    dlg.appendChild(grid);
+    dlg.addEventListener("click", function (e) { if (e.target === dlg) dlg.close(); });
+    dlg.addEventListener("close", function () { dlg.remove(); });
+    document.body.appendChild(dlg);
+    dlg.showModal();
+  }
 
+  function niosBookTile(b) {
+    var a = internal("#/book/" + encodeURIComponent(b.id), "nios-tile");
+    var cover = el("span", "nios-tile-cover");
+    cover.style.setProperty("--c", subjColor(b.t));
+    cover.appendChild(icon("book", "nios-cover-icon"));
+    cover.appendChild(el("span", "nios-cover-code", b.code));
+    var hasSol = b.ch.some(function (c) { return c[3]; });
+    if (hasSol) {
+      var badge = el("span", "nios-tile-badge");
+      badge.appendChild(icon("bulb"));
+      badge.appendChild(document.createTextNode("Solutions"));
+      cover.appendChild(badge);
+    }
+    a.appendChild(cover);
+    a.appendChild(el("strong", null, b.t));
+    var meta = [];
+    if (levelMedium === "All") meta.push(b.m);
+    meta.push(b.ch.length + (b.ch.length === 1 ? " lesson" : " lessons"));
+    a.appendChild(el("span", "nios-tile-sub", meta.join(" · ")));
     var done = readOf(b).length;
-    if (done > 0) {
-      a.appendChild(el("span", "subj-prog", done + "/" + b.ch.length));
-    } else {
-      a.appendChild(icon("chev"));
+    if (done) {
+      var bar = el("span", "nios-tile-progress");
+      var fill = el("span");
+      fill.style.width = Math.round(done / b.ch.length * 100) + "%";
+      bar.appendChild(fill);
+      a.appendChild(bar);
     }
     return a;
+  }
+
+  function groupedSubjectRow(group) {
+    var card = el("article", "subj-card");
+    card.style.setProperty("--c", subjColor(group.t));
+    var top = el("div", "subj-card-top");
+    var cd = el("span", "subj-code");
+    cd.appendChild(el("small", null, "Code"));
+    cd.appendChild(el("span", null, group.code));
+    top.appendChild(cd);
+    var mid = el("div", "subj-mid");
+    mid.appendChild(el("h3", null, group.t));
+    var maxLessons = Math.max.apply(null, group.books.map(function (b) { return b.ch.length; }));
+    mid.appendChild(el("p", null, maxLessons + (maxLessons === 1 ? " lesson" : " lessons") + (group.books.length > 1 ? " · " + group.books.length + " mediums" : "")));
+    top.appendChild(mid);
+    card.appendChild(top);
+    var choices = el("div", "medium-choices");
+    group.books.sort(function (a, b) { return a.m.localeCompare(b.m); }).forEach(function (b) {
+      var link = internal("#/book/" + encodeURIComponent(b.id), "medium-link");
+      link.appendChild(el("span", null, b.m));
+      var done = readOf(b).length;
+      if (done) link.appendChild(el("small", null, done + "/" + b.ch.length));
+      link.appendChild(icon("chev"));
+      choices.appendChild(link);
+    });
+    card.appendChild(choices);
+    return card;
+  }
+
+  function renderGroupedLevel(books) {
+    app.appendChild(el("p", "page-lead", "Choose a subject, then open the medium you study in."));
+    var grouped = {};
+    books.forEach(function (b) {
+      var key = String(b.code) + "|" + b.t.toLowerCase();
+      if (!grouped[key]) grouped[key] = { code: b.code, t: b.t, books: [] };
+      grouped[key].books.push(b);
+    });
+    var groups = Object.keys(grouped).map(function (key) {
+      var group = grouped[key];
+      var code = String(group.code);
+      group.category = languageCodes.indexOf(code) !== -1 ? "languages" : ["211", "212", "213", "311", "312", "313"].indexOf(code) !== -1 ? "core" : "electives";
+      return group;
+    });
+    var tabs = [["all", "All"], ["core", "Core"], ["languages", "Languages"], ["electives", "Electives"]];
+    var tabBar = el("div", "catalog-tabs");
+    tabs.forEach(function (tab) {
+      var count = tab[0] === "all" ? groups.length : groups.filter(function (g) { return g.category === tab[0]; }).length;
+      var btn = el("button", "catalog-tab");
+      btn.type = "button";
+      btn.setAttribute("aria-selected", String(tab[0] === currentSubjectTab));
+      btn.appendChild(el("span", null, tab[1]));
+      btn.appendChild(el("small", null, count));
+      btn.addEventListener("click", function () { currentSubjectTab = tab[0]; save("nios-subject-tab", currentSubjectTab); route(); });
+      tabBar.appendChild(btn);
+    });
+    app.appendChild(tabBar);
+    [["core", "Core subjects"], ["languages", "Languages"], ["electives", "Electives & skills"]].forEach(function (section) {
+      if (currentSubjectTab !== "all" && currentSubjectTab !== section[0]) return;
+      var items = groups.filter(function (g) { return g.category === section[0]; }).sort(function (a, b) { return Number(a.code) - Number(b.code); });
+      if (!items.length) return;
+      var block = el("section", "catalog-section");
+      var head = el("div", "catalog-section-head");
+      head.appendChild(el("h2", null, section[1]));
+      head.appendChild(el("span", null, items.length + " subjects"));
+      block.appendChild(head);
+      var list = el("div", "subj-list");
+      items.forEach(function (group) { list.appendChild(groupedSubjectRow(group)); });
+      block.appendChild(list);
+      app.appendChild(block);
+    });
   }
 
   function viewLevel(level) {
@@ -325,30 +434,65 @@
     back.appendChild(icon("back"));
     back.appendChild(document.createTextNode("Home"));
     app.appendChild(back);
-    app.appendChild(el("h1", "page-h1", LEVEL_TITLE[level]));
-    app.appendChild(el("p", "page-lead", "Pick your language medium and tap any subject to open its chapter PDFs, sample paper and TMA."));
+    app.appendChild(el("h1", "page-h1", level === "sec" ? "Class 10 books" : LEVEL_TITLE[level]));
 
     var books = BOOKS.filter(function (b) { return b.level === level; });
-    var meds = ["All"];
-    books.forEach(function (b) { if (meds.indexOf(b.m) === -1) meds.push(b.m); });
-    if (meds.indexOf(currentMed) === -1) currentMed = "All";
+    if (level !== "sec") {
+      renderGroupedLevel(books);
+      return;
+    }
 
-    var chips = el("div", "chips");
-    meds.forEach(function (m) {
-      var count = m === "All" ? books.length : books.filter(function (b) { return b.m === m; }).length;
-      var btn = el("button", "chip", m + " (" + count + ")");
+    var mediums = [];
+    books.forEach(function (b) { if (mediums.indexOf(b.m) === -1) mediums.push(b.m); });
+    mediums.sort();
+    if (levelMedium !== "All" && mediums.indexOf(levelMedium) === -1) levelMedium = mediums.indexOf("English") !== -1 ? "English" : mediums[0];
+    var inMedium = books.filter(function (b) { return levelMedium === "All" || b.m === levelMedium; });
+
+    var filter = el("div", "nios-filterbar");
+    var top = el("div", "nios-filter-top");
+    var pick = el("button", "medium-picker");
+    pick.type = "button";
+    pick.appendChild(el("span", "medium-glyph", mediumGlyph(levelMedium)));
+    var ptxt = el("span", "medium-picker-text");
+    ptxt.appendChild(el("b", null, levelMedium === "All" ? "All languages" : levelMedium + " medium"));
+    ptxt.appendChild(el("small", null, mediums.length + " languages"));
+    pick.appendChild(ptxt);
+    pick.appendChild(icon("chev"));
+    pick.addEventListener("click", function () { openMediumSheet(mediums, books); });
+    top.appendChild(pick);
+    var count = el("span", "nios-book-count");
+    top.appendChild(count);
+    filter.appendChild(top);
+
+    var names = [];
+    inMedium.forEach(function (b) { if (names.indexOf(b.t) === -1) names.push(b.t); });
+    names.sort();
+    if (levelSubject !== "All" && names.indexOf(levelSubject) === -1) levelSubject = "All";
+    var chips = el("div", "nios-subject-chips");
+    ["All"].concat(names).forEach(function (name) {
+      var n = name === "All" ? inMedium.length : inMedium.filter(function (b) { return b.t === name; }).length;
+      var btn = el("button", "nios-subject-chip");
       btn.type = "button";
-      btn.setAttribute("aria-pressed", String(m === currentMed));
-      btn.addEventListener("click", function () { currentMed = m; save("nios-medium", m); route(); });
+      btn.style.setProperty("--c", name === "All" ? "var(--accent)" : subjColor(name));
+      btn.appendChild(icon(name === "All" ? "book" : "file"));
+      btn.appendChild(el("span", null, name));
+      if (name === "All" || n > 1) btn.appendChild(el("small", null, n));
+      btn.setAttribute("aria-pressed", String(name === levelSubject));
+      btn.addEventListener("click", function () {
+        levelSubject = name;
+        route();
+      });
       chips.appendChild(btn);
     });
-    app.appendChild(chips);
+    filter.appendChild(chips);
+    app.appendChild(filter);
 
-    var list = el("div", "subj-list");
-    books.filter(function (b) { return currentMed === "All" || b.m === currentMed; })
-      .sort(function (a, b) { return a.t.localeCompare(b.t) || a.m.localeCompare(b.m); })
-      .forEach(function (b) { list.appendChild(subjectRow(b)); });
-    app.appendChild(list);
+    var shown = inMedium.filter(function (b) { return levelSubject === "All" || b.t === levelSubject; })
+      .sort(function (a, b) { return Number(a.code) - Number(b.code) || a.t.localeCompare(b.t) || a.m.localeCompare(b.m); });
+    count.textContent = shown.length + (shown.length === 1 ? " book" : " books");
+    var tiles = el("div", "nios-tiles");
+    shown.forEach(function (b) { tiles.appendChild(niosBookTile(b)); });
+    app.appendChild(tiles);
   }
 
   /* ========================================================================

@@ -1,5 +1,5 @@
-var CACHE = "nios-shell-v7";
-var SHELL = ["./", "index.html", "styles.css?v=7", "app.js?v=7", "books.js?v=7", "logo.svg", "manifest.webmanifest", "icon-192.png", "icon-512.png", "fonts/jakarta-latin.woff2", "fonts/jakarta-latin-ext.woff2"];
+var CACHE = "nios-shell-v9";
+var SHELL = ["./", "index.html", "styles.css?v=9", "app.js?v=9", "books.js?v=9", "logo.svg", "manifest.webmanifest", "icon-192.png", "icon-512.png", "fonts/jakarta-latin.woff2", "fonts/jakarta-latin-ext.woff2"];
 
 self.addEventListener("install", function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); }));
