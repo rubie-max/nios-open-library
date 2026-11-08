@@ -79,6 +79,12 @@
     return "#0d9488";
   }
 
+  function cleanChapterTitle(raw) {
+    var s = String(raw || "").trim();
+    s = s.replace(/^(?:chapter|lesson|unit|पाठ|अध्याय)\s*\d+\s*[\.\:\-–—]?\s*/i, "");
+    return s || raw;
+  }
+
   /* Read progress */
   var readMap = load("nios-read", {});
   function readOf(b) { return Array.isArray(readMap[b.id]) ? readMap[b.id] : []; }
@@ -116,6 +122,13 @@
     if (!Object.keys(edits[kind][b.id]).length) delete edits[kind][b.id];
     save("nios-edits", edits);
   }
+  function editCount() {
+    var n = 0;
+    ["v", "s"].forEach(function (k) {
+      Object.keys(edits[k] || {}).forEach(function (id) { n += Object.keys(edits[k][id]).length; });
+    });
+    return n;
+  }
   function setEditMode(on) {
     editMode = !!on;
     save("nios-edit", editMode);
@@ -137,8 +150,13 @@
     if (sheet && sheet.showModal) sheet.showModal();
   }
 
+  var installPrompt = null;
+  function isInstalled() {
+    return (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
+  }
+
   /* ========================================================================
-     HOME VIEW (Design 1 — Curved Navy App Header + Floating Course Cards + Spines)
+     HOME VIEW (Curved Navy Header + Equal Course Cards + 2x2 Quick Grid + Spines)
      ======================================================================== */
   function viewHome() {
     var secCount = BOOKS.filter(function (b) { return b.level === "sec"; }).length;
@@ -146,56 +164,54 @@
 
     var duo = el("div", "duo");
     [
-      { href: "#/sec", badge: "CLASS 10", cnt: secCount + " books", t: "Secondary", d: "Hindi, English, Maths, Science, Social Sci & 17 mediums", cta: "Open Class 10 →", c: "#1d4ed8", soft: "#dbeafe" },
-      { href: "#/sr", badge: "CLASS 12", cnt: srCount + " books", t: "Sr. Secondary", d: "PCM, PCB, Commerce, Humanities & vocational streams", cta: "Open Class 12 →", c: "#059669", soft: "#d1fae5" }
+      { href: "#/sec", badge: "CLASS 10", cnt: secCount + " books", t: "Secondary", d: "Hindi, English, Maths, Science, Social Sci & 17 mediums", cta: "Open Class 10", c: "#1d4ed8" },
+      { href: "#/sr", badge: "CLASS 12", cnt: srCount + " books", t: "Sr. Secondary", d: "PCM, PCB, Commerce, Humanities & vocational streams", cta: "Open Class 12", c: "#059669" }
     ].forEach(function (x) {
       var card = internal(x.href, "course-card");
       card.style.setProperty("--c", x.c);
-      card.style.setProperty("--soft", x.soft);
       var ct = el("div", "course-top");
       ct.appendChild(el("span", "course-badge", x.badge));
       ct.appendChild(el("span", "course-cnt", x.cnt));
       card.appendChild(ct);
       card.appendChild(el("b", null, x.t));
-      card.appendChild(el("span", null, x.d));
-      card.appendChild(el("span", "course-cta", x.cta));
+      card.appendChild(el("span", "course-desc", x.d));
+      var cta = el("span", "course-cta");
+      cta.appendChild(el("span", null, x.cta));
+      cta.appendChild(el("span", null, "→"));
+      card.appendChild(cta);
       duo.appendChild(card);
     });
     app.appendChild(duo);
 
-    var last = BY_ID[load("nios-last", "")];
-    if (last) {
-      var rc = internal("#/book/" + encodeURIComponent(last.id), "resume-card");
-      rc.appendChild(el("span", "resume-mark", last.code));
-      var rm = el("div", "resume-mid");
-      rm.appendChild(el("small", null, "Continue reading"));
-      rm.appendChild(el("b", null, last.t + " (" + last.m + ")"));
-      var done = readOf(last).length;
-      rm.appendChild(el("span", null, LEVEL_TITLE[last.level] + " · " + done + "/" + last.ch.length + " lessons read"));
-      rc.appendChild(rm);
-      rc.appendChild(icon("chev"));
-      app.appendChild(rc);
-    }
-
-    var pills = el("div", "quick-pills");
+    var qgrid = el("div", "quick-grid");
     [
-      ["#/papers", "clipboard", "TMA PDFs", "Assignments", "#d97706", "#fef3c7"],
-      ["#/papers", "file", "Sample Papers", "Question sets", "#7c3aed", "#ede9fe"],
-      ["#/labs", "flask", "Lab Manuals", "Practicals", "#e11d48", "#ffe4e6"]
-    ].forEach(function (p) {
-      var a = internal(p[0], "qpill");
+      ["#/papers", "clipboard", "TMA PDFs", "2026 assignments", "#d97706"],
+      ["#/papers", "file", "Sample Papers", "68 question sets", "#7c3aed"],
+      ["#/labs", "flask", "Lab Manuals", "34 practical guides", "#e11d48"],
+      ["#/settings", "download", isInstalled() ? "App Settings" : "Install App", isInstalled() ? "Theme & offline cache" : "Add to home screen", "#0284c7"]
+    ].forEach(function (p, idx) {
+      var a = internal(p[0], "qcard");
       a.style.setProperty("--c", p[4]);
-      a.style.setProperty("--soft", p[5]);
-      var ic = el("span", "qpill-ic");
+      var ic = el("span", "qcard-ic");
       ic.appendChild(icon(p[1]));
       a.appendChild(ic);
-      var tx = el("div");
+      var tx = el("div", "qcard-txt");
       tx.appendChild(el("b", null, p[2]));
       tx.appendChild(el("small", null, p[3]));
       a.appendChild(tx);
-      pills.appendChild(a);
+      if (idx === 3 && installPrompt) {
+        a.addEventListener("click", function (e) {
+          if (installPrompt) {
+            e.preventDefault();
+            var pr = installPrompt;
+            installPrompt = null;
+            pr.prompt();
+          }
+        });
+      }
+      qgrid.appendChild(a);
     });
-    app.appendChild(pills);
+    app.appendChild(qgrid);
 
     var sh = el("div", "sec-head");
     sh.appendChild(el("h2", null, "Popular Textbooks"));
@@ -223,46 +239,13 @@
     app.appendChild(shelf);
 
     var sb = el("div", "stats-bar");
-    [[String(BOOKS.length), "books"], ["2,550", "lesson PDFs"], ["10th & 12th", "courses"]].forEach(function (s) {
+    [[String(BOOKS.length), "books"], ["2,550", "lesson PDFs"], ["17", "mediums"]].forEach(function (s) {
       var c = el("div", "stat-cell");
       c.appendChild(el("b", null, s[0]));
       c.appendChild(el("span", null, s[1]));
       sb.appendChild(c);
     });
     app.appendChild(sb);
-
-    var hlinks = el("div", "home-links");
-    if (!isInstalled()) {
-      var inst = internal("#/settings", "home-link");
-      var iic = el("span", "home-link-ic");
-      iic.appendChild(icon("download"));
-      inst.appendChild(iic);
-      var imid = el("div", "home-link-mid");
-      imid.appendChild(el("b", null, "Install NIOS Library App"));
-      imid.appendChild(el("small", null, "Add to your home screen · opens full screen & works offline"));
-      inst.appendChild(imid);
-      inst.appendChild(el("span", "pill-cta", "Install"));
-      inst.addEventListener("click", function (e) {
-        if (installPrompt) {
-          e.preventDefault();
-          var p = installPrompt;
-          installPrompt = null;
-          p.prompt();
-        }
-      });
-      hlinks.appendChild(inst);
-    }
-    var setRow = internal("#/settings", "home-link");
-    var sic = el("span", "home-link-ic");
-    sic.appendChild(icon("gear"));
-    setRow.appendChild(sic);
-    var smid = el("div", "home-link-mid");
-    smid.appendChild(el("b", null, "Settings" + (editMode ? " · Edit mode on" : "")));
-    smid.appendChild(el("small", null, "Install app, update offline cache, dark mode & edit links"));
-    setRow.appendChild(smid);
-    setRow.appendChild(icon("chev"));
-    hlinks.appendChild(setRow);
-    app.appendChild(hlinks);
   }
 
   /* ========================================================================
@@ -309,7 +292,7 @@
     back.appendChild(document.createTextNode("Home"));
     app.appendChild(back);
     app.appendChild(el("h1", "page-h1", LEVEL_TITLE[level]));
-    app.appendChild(el("p", "page-lead", "Tap any subject to open its lesson PDFs, sample paper, TMA and lab manual."));
+    app.appendChild(el("p", "page-lead", "Pick your language medium and tap any subject to open its chapter PDFs, sample paper and TMA."));
 
     var books = BOOKS.filter(function (b) { return b.level === level; });
     var meds = ["All"];
@@ -335,7 +318,7 @@
   }
 
   /* ========================================================================
-     BOOK DETAIL VIEW (Chapters + Read Checkboxes + Edit Mode + Extras)
+     BOOK DETAIL VIEW (Balanced 2-Column Action Grid + Clean Chapter Titles)
      ======================================================================== */
   function viewBook(id) {
     var b = BY_ID[id];
@@ -353,7 +336,7 @@
     sp.style.setProperty("--c", subjColor(b.t));
     bht.appendChild(sp);
     var txt = el("div", "book-hero-txt");
-    txt.appendChild(el("small", null, LEVEL_TITLE[b.level] + " · " + b.m + " · Code " + b.code));
+    txt.appendChild(el("small", null, LEVEL_TITLE[b.level] + " · " + b.m + " Medium · Code " + b.code));
     txt.appendChild(el("h1", null, b.t));
     var subText = el("p", null, b.ch.length + " official lessons · Direct nios.ac.in PDFs");
     txt.appendChild(subText);
@@ -362,9 +345,9 @@
 
     var extras = el("div", "book-extras");
     if (b.ch[0]) {
-      var first = ext(b.ch[0][1], "extra-btn primary");
+      var first = ext(b.ch[0][1], "extra-btn primary span-all");
       first.appendChild(icon("file"));
-      first.appendChild(document.createTextNode("Lesson 1 PDF"));
+      first.appendChild(document.createTextNode("Open Lesson 1 PDF"));
       extras.appendChild(first);
     }
     if (b.extra && b.extra.length) {
@@ -410,7 +393,7 @@
       num.addEventListener("click", function () { setRead(b, i, readOf(b).indexOf(i) === -1); refresh(); });
       li.appendChild(num);
 
-      li.appendChild(el("span", "ch-name", c[0]));
+      li.appendChild(el("span", "ch-name", cleanChapterTitle(c[0])));
 
       var acts = el("span", "ch-acts");
       var pdf = ext(c[1], "pill-btn");
@@ -434,7 +417,7 @@
         var solPdf = directPdf(sol);
         var sv = ext(sol || "#", "pill-btn sol" + (sol ? " custom" : " add"));
         sv.appendChild(icon(solPdf ? "file" : "bulb"));
-        sv.appendChild(document.createTextNode(!sol ? "Add" : (solPdf ? "PDF" : "Notes")));
+        sv.appendChild(document.createTextNode(!sol ? "Add" : (solPdf ? "PDF" : "Solve")));
         if (editMode) sv.addEventListener("click", function (e) { e.preventDefault(); openEdit(b, i); });
         acts.appendChild(sv);
       }
@@ -503,49 +486,37 @@
   }
 
   /* ========================================================================
-     SETTINGS VIEW (Install App + Update App + Edit Mode + Dark Mode + Backup)
+     SETTINGS VIEW (Grouped, Well-Proportioned, Fits One Screen Cleanly)
      ======================================================================== */
-  var installPrompt = null;
-  function isInstalled() {
-    return (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
-  }
-  function editCount() {
-    var n = 0;
-    ["v", "s"].forEach(function (k) {
-      Object.keys(edits[k] || {}).forEach(function (id) { n += Object.keys(edits[k][id]).length; });
-    });
-    return n;
-  }
-  function installCard() {
-    var icard = el("section", "set-card");
-    icard.id = "set-install";
-    var irow = el("div", "set-row");
+  function appInstallAndUpdateCard() {
+    var card = el("section", "set-card");
+    card.id = "set-install";
+    var row = el("div", "set-row");
     var img = el("img", "set-app-ic");
     img.src = "icon-192.png";
     img.alt = "";
-    irow.appendChild(img);
-    var itxt = el("div", "set-copy");
-    itxt.appendChild(el("b", null, "Install on your home screen"));
-    var ua = navigator.userAgent;
-    var ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-    if (isInstalled()) {
-      itxt.appendChild(el("span", null, "Installed. You’re using NIOS Open Library as an app."));
-      irow.appendChild(itxt);
-      icard.appendChild(irow);
-      return icard;
-    }
-    itxt.appendChild(el("span", null, "Opens full screen like an app, and your books list still opens without internet."));
-    irow.appendChild(itxt);
+    row.appendChild(img);
+    var txt = el("div", "set-copy");
+    txt.appendChild(el("b", null, "NIOS Open Library App"));
+    txt.appendChild(el("span", null, isInstalled()
+      ? "Installed on this device. Use Update App below to pull the newest pages."
+      : "Install on your home screen for full-screen reading and offline access."));
+    row.appendChild(txt);
+    card.appendChild(row);
+
     var steps = el("ol", "set-steps");
     steps.hidden = true;
+    var ua = navigator.userAgent;
+    var ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
     var lines = ios
       ? ["Open this site in Safari.", "Tap the Share button (square with an arrow).", "Tap “Add to Home Screen”, then Add."]
-      : /Firefox/.test(ua)
-        ? ["Open the browser menu (⋮).", "Tap “Install” or “Add to Home screen”."]
-        : ["Open the browser menu (⋮ at the top right).", "Tap “Install app” or “Add to Home screen”.", "Confirm with Install."];
+      : ["Open the browser menu (⋮ at the top right).", "Tap “Install app” or “Add to Home screen”.", "Confirm with Install."];
     lines.forEach(function (s) { steps.appendChild(el("li", null, s)); });
-    var ibtn = el("button", "btn primary", "Install");
+
+    var btns = el("div", "set-app-btns");
+    var ibtn = el("button", "btn primary", isInstalled() ? "Installed ✓" : "Install on Home Screen");
     ibtn.type = "button";
+    ibtn.disabled = isInstalled();
     ibtn.addEventListener("click", function () {
       if (installPrompt) {
         var p = installPrompt;
@@ -554,17 +525,29 @@
         if (p.userChoice) p.userChoice.then(function () { refreshInstallCard(); });
         return;
       }
-      steps.hidden = false;
-      ibtn.hidden = true;
+      steps.hidden = !steps.hidden;
     });
-    irow.appendChild(ibtn);
-    icard.appendChild(irow);
-    icard.appendChild(steps);
-    return icard;
+
+    var ubtn = el("button", "btn", "Update App Now");
+    ubtn.type = "button";
+    ubtn.addEventListener("click", function () {
+      ubtn.disabled = true;
+      ubtn.textContent = "Updating…";
+      var work = window.caches
+        ? caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); })
+        : Promise.resolve();
+      work.catch(function () {}).then(function () { location.reload(); });
+    });
+
+    btns.appendChild(ibtn);
+    btns.appendChild(ubtn);
+    card.appendChild(btns);
+    card.appendChild(steps);
+    return card;
   }
   function refreshInstallCard() {
     var old = document.getElementById("set-install");
-    if (old) old.replaceWith(installCard());
+    if (old) old.replaceWith(appInstallAndUpdateCard());
   }
 
   function viewSettings() {
@@ -573,64 +556,18 @@
     back.appendChild(document.createTextNode("Home"));
     app.appendChild(back);
     app.appendChild(el("h1", "page-h1", "Settings"));
-    app.appendChild(el("p", "page-lead", "Install on your home screen, update cached pages, or turn on Edit mode to customize chapter links."));
+    app.appendChild(el("p", "page-lead", "Install on your home screen, update offline cache, or customize chapter links."));
 
-    app.appendChild(installCard());
+    app.appendChild(appInstallAndUpdateCard());
 
-    /* Update Card */
-    var ucard = el("section", "set-card");
-    var urow = el("div", "set-row");
-    var utxt = el("div", "set-copy");
-    utxt.appendChild(el("b", null, "Update the app"));
-    utxt.appendChild(el("span", null, "The app keeps a saved copy so it opens offline. Tap to pull the newest version and reload."));
-    urow.appendChild(utxt);
-    var ubtn = el("button", "btn", "Update now");
-    ubtn.type = "button";
-    var ustatus = el("p", "set-hint");
-    ustatus.hidden = true;
-    ubtn.addEventListener("click", function () {
-      ubtn.disabled = true;
-      ubtn.textContent = "Updating…";
-      ustatus.hidden = false;
-      ustatus.textContent = "Fetching the latest version…";
-      var work = window.caches ? caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }) : Promise.resolve();
-      work.catch(function () {}).then(function () { location.reload(); });
-    });
-    urow.appendChild(ubtn);
-    ucard.appendChild(urow);
-    ucard.appendChild(ustatus);
-    app.appendChild(ucard);
+    /* Grouped Preferences Card: Dark Mode + Edit Mode */
+    var prefs = el("section", "set-card");
+    prefs.appendChild(el("h2", null, "Preferences"));
 
-    /* Edit Mode Card */
-    var ecard = el("section", "set-card");
-    var erow = el("div", "set-row");
-    var etxt = el("div", "set-copy");
-    etxt.appendChild(el("b", null, "Edit mode"));
-    etxt.appendChild(el("span", null, "On any subject, tap Video or Notes/Add and paste a YouTube or solutions PDF URL."));
-    erow.appendChild(etxt);
-    var etog = el("button", "toggle");
-    etog.type = "button";
-    etog.setAttribute("role", "switch");
-    etog.setAttribute("aria-checked", String(editMode));
-    etog.setAttribute("aria-label", "Edit mode");
-    etog.addEventListener("click", function () { setEditMode(!editMode); route(); });
-    erow.appendChild(etog);
-    ecard.appendChild(erow);
-    if (editMode) {
-      var go = el("p", "set-hint");
-      go.appendChild(document.createTextNode("Open a subject to start. Dashed Add means no link yet; outlined buttons are ones you customized. "));
-      go.appendChild(internal("#/sec", null, "Browse Class 10 →"));
-      ecard.appendChild(go);
-    }
-    app.appendChild(ecard);
-
-    /* Appearance Card */
-    var dcard = el("section", "set-card");
-    dcard.appendChild(el("h2", null, "Appearance"));
     var drow = el("div", "set-row");
     var dtxt = el("div", "set-copy");
     dtxt.appendChild(el("b", null, "Dark mode"));
-    dtxt.appendChild(el("span", null, "Or use the sun and moon button in the header."));
+    dtxt.appendChild(el("span", null, "Switch between light and dark appearance."));
     drow.appendChild(dtxt);
     var dtog = el("button", "toggle");
     dtog.type = "button";
@@ -642,14 +579,35 @@
       dtog.setAttribute("aria-checked", String(document.documentElement.dataset.theme === "dark"));
     });
     drow.appendChild(dtog);
-    dcard.appendChild(drow);
-    app.appendChild(dcard);
+    prefs.appendChild(drow);
 
-    /* Your Changes Card */
-    var changes = el("section", "set-card");
-    changes.appendChild(el("h2", null, "Your changes (" + editCount() + ")"));
+    var erow = el("div", "set-row");
+    var etxt = el("div", "set-copy");
+    etxt.appendChild(el("b", null, "Edit mode"));
+    etxt.appendChild(el("span", null, "Add or edit chapter YouTube videos and solution PDF links."));
+    erow.appendChild(etxt);
+    var etog = el("button", "toggle");
+    etog.type = "button";
+    etog.setAttribute("role", "switch");
+    etog.setAttribute("aria-checked", String(editMode));
+    etog.setAttribute("aria-label", "Edit mode");
+    etog.addEventListener("click", function () { setEditMode(!editMode); route(); });
+    erow.appendChild(etog);
+    prefs.appendChild(erow);
+
+    if (editMode) {
+      var go = el("p", "set-hint");
+      go.appendChild(document.createTextNode("Edit mode is on. Open any subject and tap Add/Video/Solve to set a link. "));
+      go.appendChild(internal("#/sec", null, "Browse Class 10 →"));
+      prefs.appendChild(go);
+    }
+    app.appendChild(prefs);
+
+    /* Custom Links & Backup Card */
+    var backup = el("section", "set-card");
+    backup.appendChild(el("h2", null, "Custom links & backup (" + editCount() + ")"));
     if (!editCount()) {
-      changes.appendChild(el("p", "set-hint", "Nothing changed yet. Turn on Edit mode, open a subject, and tap a lesson’s Add button."));
+      backup.appendChild(el("p", "set-hint", "No custom links saved yet. Turn on Edit mode above to add chapter videos or notes, or paste a backup below."));
     } else {
       var ul = el("ul", "set-edits");
       ["v", "s"].forEach(function (kind) {
@@ -661,7 +619,7 @@
             var val = edits[kind][id][k];
             var li = el("li", "set-edit");
             var left = el("div");
-            left.appendChild(el("b", null, b.t + " · " + (b.ch[idx] ? b.ch[idx][0] : "Lesson " + (idx + 1))));
+            left.appendChild(el("b", null, b.t + " · " + (b.ch[idx] ? cleanChapterTitle(b.ch[idx][0]) : "Lesson " + (idx + 1))));
             left.appendChild(el("small", null, (kind === "v" ? "Video: " : "Notes: ") + val));
             li.appendChild(left);
             var acts = el("div", "set-mini");
@@ -679,16 +637,11 @@
           });
         });
       });
-      changes.appendChild(ul);
+      backup.appendChild(ul);
     }
-    app.appendChild(changes);
 
-    /* Copy or Restore Card */
-    var backup = el("section", "set-card");
-    backup.appendChild(el("h2", null, "Copy or restore"));
-    backup.appendChild(el("p", "set-hint", "Changes live only in this browser. Copy them if you want a backup, or paste a backup back in."));
-    var brow = el("div", "book-extras");
-    var copyBtn = el("button", "btn", "Copy changes");
+    var brow = el("div", "backup-acts");
+    var copyBtn = el("button", "btn", "Copy backup");
     copyBtn.type = "button";
     copyBtn.disabled = !editCount();
     copyBtn.addEventListener("click", function () {
@@ -718,7 +671,7 @@
     clearBtn.disabled = !editCount();
     var armed = false;
     clearBtn.addEventListener("click", function () {
-      if (!armed) { armed = true; clearBtn.textContent = "Tap again to clear"; return; }
+      if (!armed) { armed = true; clearBtn.textContent = "Tap again"; return; }
       edits = { v: {}, s: {} };
       save("nios-edits", edits);
       route();
@@ -741,7 +694,7 @@
       ["sec", "#/sec", "Class 10", "book"],
       ["sr", "#/sr", "Class 12", "grad"],
       ["papers", "#/papers", "Papers", "clipboard"],
-      ["settings", "#/settings", "Settings", "gear"]
+      ["labs", "#/labs", "Practicals", "flask"]
     ].forEach(function (x) {
       var a = internal(x[1]);
       a.dataset.route = x[0];
@@ -792,7 +745,7 @@
   function applyTheme(t) {
     document.documentElement.dataset.theme = t;
     var meta = document.querySelector('meta[name="theme-color"]');
-    if (meta) meta.content = t === "dark" ? "#080d18" : "#0a2540";
+    if (meta) meta.content = t === "dark" ? "#090e1a" : "#0a2540";
     themeBtn.textContent = "";
     themeBtn.appendChild(icon(t === "dark" ? "sun" : "moon"));
   }

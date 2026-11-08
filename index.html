@@ -20,7 +20,7 @@
     if (!t) { try { t = localStorage.getItem("nios-theme"); } catch (e) {} }
     if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     document.documentElement.dataset.theme = t;
-    document.querySelector('meta[name="theme-color"]').content = t === "dark" ? "#080d18" : "#0a2540";
+    document.querySelector('meta[name="theme-color"]').content = t === "dark" ? "#0b1120" : "#0a2540";
   })();
 </script>
 <link rel="preload" href="fonts/jakarta-latin.woff2" as="font" type="font/woff2" crossorigin>
@@ -44,17 +44,19 @@
         <button class="ibtn" id="themeBtn" type="button" aria-label="Switch theme"></button>
       </div>
     </div>
-    <h1 class="hero-title" id="heroTitle">Find your books, TMAs &amp; sample papers</h1>
-    <form class="search" id="searchForm" role="search">
-      <span class="search-ic" id="searchIc" aria-hidden="true"></span>
-      <input id="q" type="search" placeholder="Search subject or code (e.g. 211, Physics)…" autocomplete="off" enterkeyhint="search">
-      <span class="search-badge" id="bookCountBadge">102 books</span>
-    </form>
+    <div class="hero-home-only" id="heroHomeOnly">
+      <h1 class="hero-title">Find your books, TMAs &amp; sample papers</h1>
+      <form class="search" id="searchForm" role="search">
+        <span class="search-ic" id="searchIc" aria-hidden="true"></span>
+        <input id="q" type="search" placeholder="Search subject or code (e.g. 211, Physics)…" autocomplete="off" enterkeyhint="search">
+        <span class="search-badge" id="bookCountBadge">102 books</span>
+      </form>
+    </div>
   </div>
 </header>
 
 <div class="edit-bar wrap" id="editBar" hidden>
-  <span>Edit mode is on · tap any chapter's Video or Solutions button to set a link</span>
+  <span>Edit mode is on · tap Video or Solve/Add on any lesson to set a custom link</span>
   <a href="#/settings">Settings</a>
 </div>
 
@@ -68,10 +70,10 @@
     <label class="set-field">
       <span>YouTube video (URL or 11-char ID)</span>
       <input id="editVid" type="text" placeholder="https://www.youtube.com/watch?v=…" autocomplete="off">
-      <small class="set-err" id="editVidErr" hidden></small>
     </label>
+    <p class="set-err" id="editVidErr" hidden></p>
     <label class="set-field">
-      <span>Notes / Solutions link (PDF or web URL)</span>
+      <span>Solutions / Notes link (PDF or URL)</span>
       <input id="editSol" type="text" placeholder="https://…/solutions.pdf" autocomplete="off">
     </label>
     <div class="set-sheet-acts">
