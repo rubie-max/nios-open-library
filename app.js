@@ -283,8 +283,6 @@
      ======================================================================== */
   var levelMedium = load("nios-level-medium", "English");
   var levelSubject = "All";
-  var currentSubjectTab = load("nios-subject-tab", "all");
-  var languageCodes = ["201", "202", "203", "204", "205", "206", "207", "208", "209", "210", "228", "231", "232", "233", "235", "236", "237", "238", "301", "302", "303", "304", "305", "306", "307", "309", "310", "341", "342"];
 
   function mediumGlyph(m) {
     var glyphs = { English: "Aa", Hindi: "अ", Urdu: "ا", Bengali: "বা", Marathi: "म", Telugu: "తె", Gujarati: "ગ", Kannada: "ಕ", Sanskrit: "सं", Punjabi: "ਪ", Tamil: "த" };
@@ -329,7 +327,7 @@
     dlg.showModal();
   }
 
-  function niosBookTile(b) {
+  function niosBookTile(b, showMedium) {
     var a = internal("#/book/" + encodeURIComponent(b.id), "nios-tile");
     var cover = el("span", "nios-tile-cover");
     cover.style.setProperty("--c", subjColor(b.t));
@@ -345,7 +343,7 @@
     a.appendChild(cover);
     a.appendChild(el("strong", null, b.t));
     var meta = [];
-    if (levelMedium === "All") meta.push(b.m);
+    if (showMedium || levelMedium === "All") meta.push(b.m);
     meta.push(b.ch.length + (b.ch.length === 1 ? " lesson" : " lessons"));
     a.appendChild(el("span", "nios-tile-sub", meta.join(" · ")));
     var done = readOf(b).length;
@@ -359,88 +357,14 @@
     return a;
   }
 
-  function groupedSubjectRow(group) {
-    var card = el("article", "subj-card");
-    card.style.setProperty("--c", subjColor(group.t));
-    var top = el("div", "subj-card-top");
-    var cd = el("span", "subj-code");
-    cd.appendChild(el("small", null, "Code"));
-    cd.appendChild(el("span", null, group.code));
-    top.appendChild(cd);
-    var mid = el("div", "subj-mid");
-    mid.appendChild(el("h3", null, group.t));
-    var maxLessons = Math.max.apply(null, group.books.map(function (b) { return b.ch.length; }));
-    mid.appendChild(el("p", null, maxLessons + (maxLessons === 1 ? " lesson" : " lessons") + (group.books.length > 1 ? " · " + group.books.length + " mediums" : "")));
-    top.appendChild(mid);
-    card.appendChild(top);
-    var choices = el("div", "medium-choices");
-    group.books.sort(function (a, b) { return a.m.localeCompare(b.m); }).forEach(function (b) {
-      var link = internal("#/book/" + encodeURIComponent(b.id), "medium-link");
-      link.appendChild(el("span", null, b.m));
-      var done = readOf(b).length;
-      if (done) link.appendChild(el("small", null, done + "/" + b.ch.length));
-      link.appendChild(icon("chev"));
-      choices.appendChild(link);
-    });
-    card.appendChild(choices);
-    return card;
-  }
-
-  function renderGroupedLevel(books) {
-    app.appendChild(el("p", "page-lead", "Choose a subject, then open the medium you study in."));
-    var grouped = {};
-    books.forEach(function (b) {
-      var key = String(b.code) + "|" + b.t.toLowerCase();
-      if (!grouped[key]) grouped[key] = { code: b.code, t: b.t, books: [] };
-      grouped[key].books.push(b);
-    });
-    var groups = Object.keys(grouped).map(function (key) {
-      var group = grouped[key];
-      var code = String(group.code);
-      group.category = languageCodes.indexOf(code) !== -1 ? "languages" : ["211", "212", "213", "311", "312", "313"].indexOf(code) !== -1 ? "core" : "electives";
-      return group;
-    });
-    var tabs = [["all", "All"], ["core", "Core"], ["languages", "Languages"], ["electives", "Electives"]];
-    var tabBar = el("div", "catalog-tabs");
-    tabs.forEach(function (tab) {
-      var count = tab[0] === "all" ? groups.length : groups.filter(function (g) { return g.category === tab[0]; }).length;
-      var btn = el("button", "catalog-tab");
-      btn.type = "button";
-      btn.setAttribute("aria-selected", String(tab[0] === currentSubjectTab));
-      btn.appendChild(el("span", null, tab[1]));
-      btn.appendChild(el("small", null, count));
-      btn.addEventListener("click", function () { currentSubjectTab = tab[0]; save("nios-subject-tab", currentSubjectTab); route(); });
-      tabBar.appendChild(btn);
-    });
-    app.appendChild(tabBar);
-    [["core", "Core subjects"], ["languages", "Languages"], ["electives", "Electives & skills"]].forEach(function (section) {
-      if (currentSubjectTab !== "all" && currentSubjectTab !== section[0]) return;
-      var items = groups.filter(function (g) { return g.category === section[0]; }).sort(function (a, b) { return Number(a.code) - Number(b.code); });
-      if (!items.length) return;
-      var block = el("section", "catalog-section");
-      var head = el("div", "catalog-section-head");
-      head.appendChild(el("h2", null, section[1]));
-      head.appendChild(el("span", null, items.length + " subjects"));
-      block.appendChild(head);
-      var list = el("div", "subj-list");
-      items.forEach(function (group) { list.appendChild(groupedSubjectRow(group)); });
-      block.appendChild(list);
-      app.appendChild(block);
-    });
-  }
-
   function viewLevel(level) {
     var back = internal("#/", "back-link");
     back.appendChild(icon("back"));
     back.appendChild(document.createTextNode("Home"));
     app.appendChild(back);
-    app.appendChild(el("h1", "page-h1", level === "sec" ? "Class 10 books" : LEVEL_TITLE[level]));
+    app.appendChild(el("h1", "page-h1", level === "sec" ? "Class 10 books" : "Class 12 books"));
 
     var books = BOOKS.filter(function (b) { return b.level === level; });
-    if (level !== "sec") {
-      renderGroupedLevel(books);
-      return;
-    }
 
     var mediums = [];
     books.forEach(function (b) { if (mediums.indexOf(b.m) === -1) mediums.push(b.m); });
@@ -491,7 +415,7 @@
       .sort(function (a, b) { return Number(a.code) - Number(b.code) || a.t.localeCompare(b.t) || a.m.localeCompare(b.m); });
     count.textContent = shown.length + (shown.length === 1 ? " book" : " books");
     var tiles = el("div", "nios-tiles");
-    shown.forEach(function (b) { tiles.appendChild(niosBookTile(b)); });
+    shown.forEach(function (b) { tiles.appendChild(niosBookTile(b, false)); });
     app.appendChild(tiles);
   }
 
@@ -619,60 +543,106 @@
      PAPERS / LAB MANUALS VIEW
      ======================================================================== */
   var paperFilter = "all";
+  var labFilter = "all";
   function viewPapers(kind) {
     var back = internal("#/", "back-link");
     back.appendChild(icon("back"));
     back.appendChild(document.createTextNode("Home"));
     app.appendChild(back);
     var isLab = kind === "labs";
-    app.appendChild(el("h1", "page-h1", isLab ? "Lab Manuals & Learner Guides" : "Question Papers, Sample Papers & TMA"));
+    app.appendChild(el("h1", "page-h1", isLab ? "Guides & practicals" : "Papers & TMA"));
     app.appendChild(el("p", "page-lead", isLab
-      ? "Official practical manuals, full textbook PDFs and chapter-wise learner guides from nios.ac.in."
-      : "Official 2024 & 2022 board question papers, previous exam papers, sample papers and TMAs."));
+      ? "Official learner guides, lab manuals and practical material."
+      : "Official question papers, sample papers and tutor-marked assignments."));
 
-    if (!isLab) {
-      var chips = el("div", "chips");
-      [
-        ["all", "All Papers"],
-        ["sec", "Class 10 (Secondary)"],
-        ["sr", "Class 12 (Sr. Secondary)"],
-        ["2024", "2024 & 2022 Papers"],
-        ["sample", "Sample & TMA"]
-      ].forEach(function (f) {
-        var btn = el("button", "chip", f[1]);
-        btn.type = "button";
-        btn.setAttribute("aria-pressed", String(paperFilter === f[0]));
-        btn.addEventListener("click", function () { paperFilter = f[0]; route(); });
-        chips.appendChild(btn);
-      });
-      app.appendChild(chips);
-    }
+    var sectionNav = el("nav", "resource-switch");
+    var paperLink = internal("#/papers", null, "Papers & TMA");
+    var labLink = internal("#/labs", null, "Guides & practicals");
+    (isLab ? labLink : paperLink).setAttribute("aria-current", "page");
+    sectionNav.appendChild(paperLink);
+    sectionNav.appendChild(labLink);
+    app.appendChild(sectionNav);
 
-    var list = el("div", "subj-list");
+    var entries = [];
+    var seen = {};
     BOOKS.forEach(function (b) {
-      if (!isLab && (paperFilter === "sec" || paperFilter === "sr") && b.level !== paperFilter) return;
       (b.extra || []).forEach(function (x) {
         var match = isLab ? /lab|manual|guide|book/i.test(x[0]) : /sample|tma|question|assignment/i.test(x[0]);
         if (!match) return;
-        if (!isLab && paperFilter === "2024" && !/2024|2022/.test(x[0])) return;
-        if (!isLab && paperFilter === "sample" && !/sample|tma|assignment/i.test(x[0])) return;
-        var row = ext(x[1], "subj-row");
-        row.style.setProperty("--c", subjColor(b.t));
-        var cd = el("span", "subj-code");
-        cd.appendChild(el("small", null, "Code"));
-        cd.appendChild(el("span", null, b.code));
-        row.appendChild(cd);
-        var mid = el("div", "subj-mid");
-        mid.appendChild(el("b", null, b.t + " (" + b.m + ")"));
-        mid.appendChild(el("small", null, x[0] + " · " + LEVEL_TITLE[b.level]));
-        row.appendChild(mid);
-        var p = el("span", "pill-btn", "PDF");
-        p.prepend(icon("file"));
-        row.appendChild(p);
-        list.appendChild(row);
+        var key = x[1] + "|" + b.id + "|" + x[0];
+        if (seen[key]) return;
+        seen[key] = true;
+        entries.push({ b: b, x: x });
       });
     });
-    app.appendChild(list.childNodes.length ? list : el("p", "empty", "No files listed in this category."));
+
+    var activeFilter = isLab ? labFilter : paperFilter;
+    var filters = isLab
+      ? [
+        ["all", "All"],
+        ["sec", "Class 10"],
+        ["sr", "Class 12"],
+        ["lab", "Lab manuals"],
+        ["guide", "Learner guides"],
+        ["book", "Full books"]
+      ]
+      : [
+        ["all", "All"],
+        ["sec", "Class 10"],
+        ["sr", "Class 12"],
+        ["question", "Question papers"],
+        ["tma", "TMA"],
+        ["sample", "Sample papers"]
+      ];
+    var chips = el("div", "resource-filters");
+    filters.forEach(function (f) {
+      var btn = el("button", "resource-filter");
+      btn.type = "button";
+      btn.appendChild(icon(f[0] === "all" ? "file" : f[0] === "tma" ? "clipboard" : f[0] === "lab" ? "flask" : "book"));
+      btn.appendChild(document.createTextNode(f[1]));
+      btn.setAttribute("aria-pressed", String(activeFilter === f[0]));
+      btn.addEventListener("click", function () {
+        if (isLab) labFilter = f[0]; else paperFilter = f[0];
+        route();
+      });
+      chips.appendChild(btn);
+    });
+    app.appendChild(chips);
+    entries = entries.filter(function (entry) {
+      if (activeFilter === "sec" || activeFilter === "sr") return entry.b.level === activeFilter;
+      if (activeFilter === "question") return /question/i.test(entry.x[0]);
+      if (activeFilter === "tma") return /tma|assignment/i.test(entry.x[0]);
+      if (activeFilter === "sample") return /sample/i.test(entry.x[0]);
+      if (activeFilter === "lab") return /lab|manual|practical/i.test(entry.x[0]);
+      if (activeFilter === "guide") return /guide/i.test(entry.x[0]);
+      if (activeFilter === "book") return /book/i.test(entry.x[0]);
+      return true;
+    });
+
+    var resultHead = el("div", "resource-result-head");
+    resultHead.appendChild(el("b", null, isLab ? "Study resources" : "Available PDFs"));
+    resultHead.appendChild(el("span", null, entries.length + (entries.length === 1 ? " file" : " files")));
+    app.appendChild(resultHead);
+
+    var tiles = el("div", "nios-tiles resource-tiles");
+    entries.forEach(function (entry) {
+      var b = entry.b, x = entry.x;
+      var tile = ext(x[1], "nios-tile resource-tile");
+      var cover = el("span", "nios-tile-cover");
+      cover.style.setProperty("--c", subjColor(b.t));
+      cover.appendChild(icon(isLab ? "flask" : "file", "nios-cover-icon"));
+      cover.appendChild(el("span", "nios-cover-code", b.code));
+      var badge = el("span", "nios-tile-badge");
+      badge.appendChild(icon("file"));
+      badge.appendChild(document.createTextNode("PDF"));
+      cover.appendChild(badge);
+      tile.appendChild(cover);
+      tile.appendChild(el("strong", null, b.t));
+      tile.appendChild(el("span", "resource-name", x[0]));
+      tile.appendChild(el("span", "nios-tile-sub", (b.level === "sec" ? "Class 10" : "Class 12") + " · " + b.m));
+      tiles.appendChild(tile);
+    });
+    app.appendChild(entries.length ? tiles : el("p", "empty", "No files listed in this category."));
   }
 
   /* ========================================================================
@@ -689,8 +659,8 @@
       return (b.t + " " + b.m + " " + b.code + " " + b.ch.map(function (c) { return c[0]; }).join(" ")).toLowerCase().indexOf(query) !== -1;
     });
     app.appendChild(el("p", "page-lead", hits.length + " subjects matching “" + q + "”."));
-    var list = el("div", "subj-list");
-    hits.forEach(function (b) { list.appendChild(subjectRow(b)); });
+    var list = el("div", "nios-tiles");
+    hits.forEach(function (b) { list.appendChild(niosBookTile(b, true)); });
     app.appendChild(hits.length ? list : el("p", "empty", "No subjects matched that search."));
   }
 
@@ -932,8 +902,9 @@
     else if (name === "settings") viewSettings();
     else { name = "home"; hero.classList.remove("compact"); app.classList.add("overlap"); viewHome(); }
 
+    var activeRoute = name === "labs" ? "papers" : name;
     [].forEach.call(document.querySelectorAll("[data-route]"), function (a) {
-      if (a.dataset.route === name) a.setAttribute("aria-current", "page");
+      if (a.dataset.route === activeRoute) a.setAttribute("aria-current", "page");
       else a.removeAttribute("aria-current");
     });
     var setBtn = document.getElementById("settingsBtn");
