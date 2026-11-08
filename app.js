@@ -183,6 +183,20 @@
     });
     app.appendChild(duo);
 
+    var last = BY_ID[load("nios-last", "")];
+    if (last) {
+      var rc = internal("#/book/" + encodeURIComponent(last.id), "resume-card");
+      rc.appendChild(el("span", "resume-mark", last.code));
+      var rm = el("div", "resume-mid");
+      rm.appendChild(el("small", null, "Continue reading"));
+      rm.appendChild(el("b", null, last.t + " (" + last.m + ")"));
+      var done = readOf(last).length;
+      rm.appendChild(el("span", null, (last.level === "sec" ? "Class 10" : "Class 12") + " · " + done + "/" + last.ch.length + " lessons read"));
+      rc.appendChild(rm);
+      rc.appendChild(icon("chev"));
+      app.appendChild(rc);
+    }
+
     var qgrid = el("div", "quick-grid");
     [
       ["#/papers", "clipboard", "TMA PDFs", "2026 assignments", "#d97706"],
@@ -694,7 +708,7 @@
       ["sec", "#/sec", "Class 10", "book"],
       ["sr", "#/sr", "Class 12", "grad"],
       ["papers", "#/papers", "Papers", "clipboard"],
-      ["labs", "#/labs", "Practicals", "flask"]
+      ["settings", "#/settings", "Settings", "gear"]
     ].forEach(function (x) {
       var a = internal(x[1]);
       a.dataset.route = x[0];

@@ -1,5 +1,5 @@
-var CACHE = "nios-shell-v5";
-var SHELL = ["./", "index.html", "styles.css", "app.js", "books.js", "logo.svg", "manifest.webmanifest", "icon-192.png", "icon-512.png", "fonts/jakarta-latin.woff2", "fonts/jakarta-latin-ext.woff2"];
+var CACHE = "nios-shell-v6";
+var SHELL = ["./", "index.html", "styles.css?v=6", "app.js?v=6", "books.js?v=6", "logo.svg", "manifest.webmanifest", "icon-192.png", "icon-512.png", "fonts/jakarta-latin.woff2", "fonts/jakarta-latin-ext.woff2"];
 
 self.addEventListener("install", function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(SHELL); }).then(function () { return self.skipWaiting(); }));
@@ -12,7 +12,7 @@ self.addEventListener("activate", function (e) {
 self.addEventListener("fetch", function (e) {
   var req = e.request;
   if (req.method !== "GET" || new URL(req.url).origin !== self.location.origin) return;
-  e.respondWith(fetch(req).then(function (res) {
+  e.respondWith(fetch(req, { cache: "no-cache" }).then(function (res) {
     if (res.ok) {
       var copy = res.clone();
       caches.open(CACHE).then(function (c) { c.put(req, copy); });

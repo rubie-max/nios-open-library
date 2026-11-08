@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>NIOS Open Library · Class 10 &amp; 12 Textbooks, TMA &amp; Sample Papers</title>
 <meta name="description" content="Every official NIOS Secondary (Class 10) and Senior Secondary (Class 12) textbook PDF, Tutor Marked Assignment (TMA), sample paper and lab manual.">
-<meta name="theme-color" content="#0a2540">
+<meta name="theme-color" content="#121a2b">
 <link rel="icon" href="logo.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -20,11 +20,11 @@
     if (!t) { try { t = localStorage.getItem("nios-theme"); } catch (e) {} }
     if (t !== "light" && t !== "dark") t = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
     document.documentElement.dataset.theme = t;
-    document.querySelector('meta[name="theme-color"]').content = t === "dark" ? "#0b1120" : "#0a2540";
+    document.querySelector('meta[name="theme-color"]').content = t === "dark" ? "#121a2b" : "#0a2540";
   })();
 </script>
 <link rel="preload" href="fonts/jakarta-latin.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="styles.css?v=6">
 </head>
 <body>
 <a class="skip" href="#app">Skip to content</a>
@@ -48,7 +48,7 @@
       <h1 class="hero-title">Find your books, TMAs &amp; sample papers</h1>
       <form class="search" id="searchForm" role="search">
         <span class="search-ic" id="searchIc" aria-hidden="true"></span>
-        <input id="q" type="search" placeholder="Search subject or code (e.g. 211, Physics)…" autocomplete="off" enterkeyhint="search">
+        <input id="q" type="search" placeholder="Search subject or code (e.g. 211)…" autocomplete="off" enterkeyhint="search">
         <span class="search-badge" id="bookCountBadge">102 books</span>
       </form>
     </div>
@@ -91,7 +91,7 @@
   Chapter PDFs, TMAs, sample papers and lab manuals open directly from <strong>nios.ac.in</strong>, the official National Institute of Open Schooling portal.
 </footer>
 
-<script src="books.js"></script>
-<script src="app.js"></script>
+<script src="books.js?v=6"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>
