@@ -17,7 +17,8 @@
     video: '<rect x="2" y="5" width="20" height="14" rx="4"/><path d="m10 9 5 3-5 3z"/>',
     bulb: '<path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/>',
     search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
-    gear: '<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/>',
+    download: '<path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/>',
+    gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>',
     moon: '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>',
     sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
     back: '<path d="m15 18-6-6 6-6"/>',
@@ -229,6 +230,39 @@
       sb.appendChild(c);
     });
     app.appendChild(sb);
+
+    var hlinks = el("div", "home-links");
+    if (!isInstalled()) {
+      var inst = internal("#/settings", "home-link");
+      var iic = el("span", "home-link-ic");
+      iic.appendChild(icon("download"));
+      inst.appendChild(iic);
+      var imid = el("div", "home-link-mid");
+      imid.appendChild(el("b", null, "Install NIOS Library App"));
+      imid.appendChild(el("small", null, "Add to your home screen · opens full screen & works offline"));
+      inst.appendChild(imid);
+      inst.appendChild(el("span", "pill-cta", "Install"));
+      inst.addEventListener("click", function (e) {
+        if (installPrompt) {
+          e.preventDefault();
+          var p = installPrompt;
+          installPrompt = null;
+          p.prompt();
+        }
+      });
+      hlinks.appendChild(inst);
+    }
+    var setRow = internal("#/settings", "home-link");
+    var sic = el("span", "home-link-ic");
+    sic.appendChild(icon("gear"));
+    setRow.appendChild(sic);
+    var smid = el("div", "home-link-mid");
+    smid.appendChild(el("b", null, "Settings" + (editMode ? " · Edit mode on" : "")));
+    smid.appendChild(el("small", null, "Install app, update offline cache, dark mode & edit links"));
+    setRow.appendChild(smid);
+    setRow.appendChild(icon("chev"));
+    hlinks.appendChild(setRow);
+    app.appendChild(hlinks);
   }
 
   /* ========================================================================
@@ -469,22 +503,22 @@
   }
 
   /* ========================================================================
-     SETTINGS VIEW (Install App + Update App + Edit Mode + Dark Mode)
+     SETTINGS VIEW (Install App + Update App + Edit Mode + Dark Mode + Backup)
      ======================================================================== */
   var installPrompt = null;
   function isInstalled() {
     return (window.matchMedia && matchMedia("(display-mode: standalone)").matches) || navigator.standalone === true;
   }
-  function viewSettings() {
-    var back = internal("#/", "back-link");
-    back.appendChild(icon("back"));
-    back.appendChild(document.createTextNode("Home"));
-    app.appendChild(back);
-    app.appendChild(el("h1", "page-h1", "Settings"));
-    app.appendChild(el("p", "page-lead", "Install on your home screen, update cached pages, or turn on Edit mode."));
-
-    /* Install Card */
+  function editCount() {
+    var n = 0;
+    ["v", "s"].forEach(function (k) {
+      Object.keys(edits[k] || {}).forEach(function (id) { n += Object.keys(edits[k][id]).length; });
+    });
+    return n;
+  }
+  function installCard() {
     var icard = el("section", "set-card");
+    icard.id = "set-install";
     var irow = el("div", "set-row");
     var img = el("img", "set-app-ic");
     img.src = "icon-192.png";
@@ -492,44 +526,79 @@
     irow.appendChild(img);
     var itxt = el("div", "set-copy");
     itxt.appendChild(el("b", null, "Install on your home screen"));
-    itxt.appendChild(el("span", null, isInstalled() ? "Installed. You’re using NIOS Open Library as an app." : "Opens full screen like an app and keeps the catalogue available offline."));
+    var ua = navigator.userAgent;
+    var ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+    if (isInstalled()) {
+      itxt.appendChild(el("span", null, "Installed. You’re using NIOS Open Library as an app."));
+      irow.appendChild(itxt);
+      icard.appendChild(irow);
+      return icard;
+    }
+    itxt.appendChild(el("span", null, "Opens full screen like an app, and your books list still opens without internet."));
     irow.appendChild(itxt);
     var steps = el("ol", "set-steps");
     steps.hidden = true;
-    ["Open the browser menu (⋮).", "Tap “Install app” or “Add to Home screen”.", "On iPhone Safari, tap Share → Add to Home Screen."].forEach(function (s) {
-      steps.appendChild(el("li", null, s));
+    var lines = ios
+      ? ["Open this site in Safari.", "Tap the Share button (square with an arrow).", "Tap “Add to Home Screen”, then Add."]
+      : /Firefox/.test(ua)
+        ? ["Open the browser menu (⋮).", "Tap “Install” or “Add to Home screen”."]
+        : ["Open the browser menu (⋮ at the top right).", "Tap “Install app” or “Add to Home screen”.", "Confirm with Install."];
+    lines.forEach(function (s) { steps.appendChild(el("li", null, s)); });
+    var ibtn = el("button", "btn primary", "Install");
+    ibtn.type = "button";
+    ibtn.addEventListener("click", function () {
+      if (installPrompt) {
+        var p = installPrompt;
+        installPrompt = null;
+        p.prompt();
+        if (p.userChoice) p.userChoice.then(function () { refreshInstallCard(); });
+        return;
+      }
+      steps.hidden = false;
+      ibtn.hidden = true;
     });
-    if (!isInstalled()) {
-      var ibtn = el("button", "btn primary", "Install");
-      ibtn.type = "button";
-      ibtn.addEventListener("click", function () {
-        if (installPrompt) { var p = installPrompt; installPrompt = null; p.prompt(); return; }
-        steps.hidden = false;
-        ibtn.hidden = true;
-      });
-      irow.appendChild(ibtn);
-    }
+    irow.appendChild(ibtn);
     icard.appendChild(irow);
     icard.appendChild(steps);
-    app.appendChild(icard);
+    return icard;
+  }
+  function refreshInstallCard() {
+    var old = document.getElementById("set-install");
+    if (old) old.replaceWith(installCard());
+  }
+
+  function viewSettings() {
+    var back = internal("#/", "back-link");
+    back.appendChild(icon("back"));
+    back.appendChild(document.createTextNode("Home"));
+    app.appendChild(back);
+    app.appendChild(el("h1", "page-h1", "Settings"));
+    app.appendChild(el("p", "page-lead", "Install on your home screen, update cached pages, or turn on Edit mode to customize chapter links."));
+
+    app.appendChild(installCard());
 
     /* Update Card */
     var ucard = el("section", "set-card");
     var urow = el("div", "set-row");
     var utxt = el("div", "set-copy");
     utxt.appendChild(el("b", null, "Update the app"));
-    utxt.appendChild(el("span", null, "Clears the offline cache and fetches the newest version."));
+    utxt.appendChild(el("span", null, "The app keeps a saved copy so it opens offline. Tap to pull the newest version and reload."));
     urow.appendChild(utxt);
     var ubtn = el("button", "btn", "Update now");
     ubtn.type = "button";
+    var ustatus = el("p", "set-hint");
+    ustatus.hidden = true;
     ubtn.addEventListener("click", function () {
       ubtn.disabled = true;
       ubtn.textContent = "Updating…";
+      ustatus.hidden = false;
+      ustatus.textContent = "Fetching the latest version…";
       var work = window.caches ? caches.keys().then(function (ks) { return Promise.all(ks.map(function (k) { return caches.delete(k); })); }) : Promise.resolve();
       work.catch(function () {}).then(function () { location.reload(); });
     });
     urow.appendChild(ubtn);
     ucard.appendChild(urow);
+    ucard.appendChild(ustatus);
     app.appendChild(ucard);
 
     /* Edit Mode Card */
@@ -537,28 +606,37 @@
     var erow = el("div", "set-row");
     var etxt = el("div", "set-copy");
     etxt.appendChild(el("b", null, "Edit mode"));
-    etxt.appendChild(el("span", null, "Add or change chapter YouTube videos and notes/solution PDF links."));
+    etxt.appendChild(el("span", null, "On any subject, tap Video or Notes/Add and paste a YouTube or solutions PDF URL."));
     erow.appendChild(etxt);
     var etog = el("button", "toggle");
     etog.type = "button";
     etog.setAttribute("role", "switch");
     etog.setAttribute("aria-checked", String(editMode));
+    etog.setAttribute("aria-label", "Edit mode");
     etog.addEventListener("click", function () { setEditMode(!editMode); route(); });
     erow.appendChild(etog);
     ecard.appendChild(erow);
+    if (editMode) {
+      var go = el("p", "set-hint");
+      go.appendChild(document.createTextNode("Open a subject to start. Dashed Add means no link yet; outlined buttons are ones you customized. "));
+      go.appendChild(internal("#/sec", null, "Browse Class 10 →"));
+      ecard.appendChild(go);
+    }
     app.appendChild(ecard);
 
-    /* Dark Mode Card */
+    /* Appearance Card */
     var dcard = el("section", "set-card");
+    dcard.appendChild(el("h2", null, "Appearance"));
     var drow = el("div", "set-row");
     var dtxt = el("div", "set-copy");
     dtxt.appendChild(el("b", null, "Dark mode"));
-    dtxt.appendChild(el("span", null, "Switch between light and dark theme."));
+    dtxt.appendChild(el("span", null, "Or use the sun and moon button in the header."));
     drow.appendChild(dtxt);
     var dtog = el("button", "toggle");
     dtog.type = "button";
     dtog.setAttribute("role", "switch");
     dtog.setAttribute("aria-checked", String(document.documentElement.dataset.theme === "dark"));
+    dtog.setAttribute("aria-label", "Dark mode");
     dtog.addEventListener("click", function () {
       document.getElementById("themeBtn").click();
       dtog.setAttribute("aria-checked", String(document.documentElement.dataset.theme === "dark"));
@@ -566,6 +644,90 @@
     drow.appendChild(dtog);
     dcard.appendChild(drow);
     app.appendChild(dcard);
+
+    /* Your Changes Card */
+    var changes = el("section", "set-card");
+    changes.appendChild(el("h2", null, "Your changes (" + editCount() + ")"));
+    if (!editCount()) {
+      changes.appendChild(el("p", "set-hint", "Nothing changed yet. Turn on Edit mode, open a subject, and tap a lesson’s Add button."));
+    } else {
+      var ul = el("ul", "set-edits");
+      ["v", "s"].forEach(function (kind) {
+        Object.keys(edits[kind] || {}).forEach(function (id) {
+          var b = BY_ID[id];
+          if (!b) return;
+          Object.keys(edits[kind][id]).forEach(function (k) {
+            var idx = Number(k);
+            var val = edits[kind][id][k];
+            var li = el("li", "set-edit");
+            var left = el("div");
+            left.appendChild(el("b", null, b.t + " · " + (b.ch[idx] ? b.ch[idx][0] : "Lesson " + (idx + 1))));
+            left.appendChild(el("small", null, (kind === "v" ? "Video: " : "Notes: ") + val));
+            li.appendChild(left);
+            var acts = el("div", "set-mini");
+            if (val) {
+              var open = ext(kind === "v" ? "https://www.youtube.com/watch?v=" + val : val, "set-mini-btn", "Open");
+              acts.appendChild(open);
+            }
+            acts.appendChild(internal("#/book/" + encodeURIComponent(b.id), "set-mini-btn", "Book"));
+            var drop = el("button", "set-mini-btn", "Remove");
+            drop.type = "button";
+            drop.addEventListener("click", function () { setOverride(kind, b, idx, ""); route(); });
+            acts.appendChild(drop);
+            li.appendChild(acts);
+            ul.appendChild(li);
+          });
+        });
+      });
+      changes.appendChild(ul);
+    }
+    app.appendChild(changes);
+
+    /* Copy or Restore Card */
+    var backup = el("section", "set-card");
+    backup.appendChild(el("h2", null, "Copy or restore"));
+    backup.appendChild(el("p", "set-hint", "Changes live only in this browser. Copy them if you want a backup, or paste a backup back in."));
+    var brow = el("div", "book-extras");
+    var copyBtn = el("button", "btn", "Copy changes");
+    copyBtn.type = "button";
+    copyBtn.disabled = !editCount();
+    copyBtn.addEventListener("click", function () {
+      var data = JSON.stringify(edits);
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(data).then(function () { copyBtn.textContent = "Copied!"; });
+      } else {
+        window.prompt("Copy your backup JSON:", data);
+      }
+    });
+    var pasteBtn = el("button", "btn", "Paste backup");
+    pasteBtn.type = "button";
+    pasteBtn.addEventListener("click", function () {
+      var raw = window.prompt("Paste backup JSON:");
+      if (!raw) return;
+      try {
+        var parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === "object") {
+          edits = { v: parsed.v || {}, s: parsed.s || {} };
+          save("nios-edits", edits);
+          route();
+        }
+      } catch (e) { window.alert("Invalid backup JSON."); }
+    });
+    var clearBtn = el("button", "btn danger", "Clear all");
+    clearBtn.type = "button";
+    clearBtn.disabled = !editCount();
+    var armed = false;
+    clearBtn.addEventListener("click", function () {
+      if (!armed) { armed = true; clearBtn.textContent = "Tap again to clear"; return; }
+      edits = { v: {}, s: {} };
+      save("nios-edits", edits);
+      route();
+    });
+    brow.appendChild(copyBtn);
+    brow.appendChild(pasteBtn);
+    brow.appendChild(clearBtn);
+    backup.appendChild(brow);
+    app.appendChild(backup);
   }
 
   /* ========================================================================
@@ -578,8 +740,8 @@
       ["home", "#/", "Home", "home"],
       ["sec", "#/sec", "Class 10", "book"],
       ["sr", "#/sr", "Class 12", "grad"],
-      ["papers", "#/papers", "TMA & Papers", "clipboard"],
-      ["labs", "#/labs", "Practicals", "flask"]
+      ["papers", "#/papers", "Papers", "clipboard"],
+      ["settings", "#/settings", "Settings", "gear"]
     ].forEach(function (x) {
       var a = internal(x[1]);
       a.dataset.route = x[0];
@@ -676,7 +838,15 @@
     route();
   });
 
-  window.addEventListener("beforeinstallprompt", function (e) { e.preventDefault(); installPrompt = e; });
+  window.addEventListener("beforeinstallprompt", function (e) {
+    e.preventDefault();
+    installPrompt = e;
+    refreshInstallCard();
+  });
+  window.addEventListener("appinstalled", function () {
+    installPrompt = null;
+    refreshInstallCard();
+  });
   if ("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost" || location.hostname === "127.0.0.1")) {
     window.addEventListener("load", function () { navigator.serviceWorker.register("sw.js").catch(function () {}); });
   }

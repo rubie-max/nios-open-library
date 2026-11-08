@@ -1,4 +1,4 @@
-var CACHE = "nios-shell-v2";
+var CACHE = "nios-shell-v3";
 var SHELL = ["./", "index.html", "styles.css", "app.js", "books.js", "logo.svg", "manifest.webmanifest", "icon-192.png", "icon-512.png", "fonts/jakarta-latin.woff2", "fonts/jakarta-latin-ext.woff2"];
 
 self.addEventListener("install", function (e) {

@@ -235,7 +235,7 @@ a { color: inherit; text-decoration: none; }
 .spine-cover b { font-size: 12.5px; line-height: 1.15; padding-left: 4px; }
 .spine-meta { font-size: 11px; color: var(--muted); font-weight: 700; padding: 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* Home — Stats Bar & Guide Banner */
+/* Home — Stats Bar & Settings/Install Links */
 .stats-bar {
   display: grid; grid-template-columns: repeat(3, 1fr); margin-top: 14px; padding: 12px 4px;
   background: var(--surface); border: 1px solid var(--line); border-radius: 18px;
@@ -244,6 +244,25 @@ a { color: inherit; text-decoration: none; }
 .stat-cell + .stat-cell { border-left: 1px solid var(--line); }
 .stat-cell b { display: block; font-size: 18px; font-weight: 800; }
 .stat-cell span { font-size: 11.5px; color: var(--muted); }
+
+.home-links { display: grid; gap: 8px; margin-top: 12px; }
+.home-link {
+  display: flex; align-items: center; gap: 12px; padding: 13px 15px;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 18px;
+  font-size: 14.5px; font-weight: 800; color: var(--ink); cursor: pointer;
+}
+.home-link-ic {
+  width: 36px; height: 36px; border-radius: 11px; flex: none;
+  display: grid; place-items: center;
+  background: var(--accent-soft); color: var(--accent);
+}
+.home-link-mid { flex: 1; min-width: 0; }
+.home-link-mid b { display: block; font-size: 14.5px; line-height: 1.15; }
+.home-link-mid small { display: block; font-size: 12px; font-weight: 600; color: var(--muted); }
+.home-link .pill-cta {
+  flex: none; padding: 6px 12px; border-radius: 10px;
+  background: var(--accent); color: var(--accent-ink); font-size: 12px; font-weight: 800;
+}
 
 /* Inner Pages — Back Link, Headings, Medium Chips */
 .back-link {
@@ -370,6 +389,20 @@ a { color: inherit; text-decoration: none; }
   min-height: 40px; padding: 8px 16px; cursor: pointer;
 }
 .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.btn.danger { background: var(--yt-soft); border-color: transparent; color: var(--yt); }
+.btn:disabled { opacity: 0.5; cursor: default; }
+.set-edits { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.set-edit {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 12px; border-radius: 14px; background: var(--bg); border: 1px solid var(--line);
+}
+.set-edit b { display: block; font-size: 13.5px; }
+.set-edit small { color: var(--muted); font-size: 11.5px; }
+.set-mini { display: flex; gap: 6px; flex: none; }
+.set-mini-btn {
+  font: inherit; font-size: 12px; font-weight: 800; padding: 5px 10px;
+  border-radius: 9px; background: var(--surface); border: 1px solid var(--line); color: var(--ink); cursor: pointer;
+}
 
 .sheet {
   width: min(480px, 100%); margin: auto 0 0; padding: 0 16px 18px;
