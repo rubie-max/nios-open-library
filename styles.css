@@ -369,7 +369,13 @@ a { color: inherit; text-decoration: none; }
 .pill-btn.add { background: transparent; color: var(--muted); border: 1.5px dashed var(--muted); }
 .pill-btn.add .ic { color: var(--muted); }
 .pill-btn.custom { box-shadow: inset 0 0 0 1.5px currentColor; }
+.edit-on .pill-btn.web { box-shadow: inset 0 0 0 1.5px var(--warm); }
 .edit-on .ch-row.needs { box-shadow: inset 3px 0 0 var(--warm); }
+@media (max-width: 640px) {
+  .pill-btn { min-width: 0; padding: 0 10px; }
+  .pill-btn.vid:not(.add), .ch-acts:has(.vid):has(.sol) .pill-btn:not(.add) { font-size: 0; gap: 0; width: 38px; justify-content: center; padding: 0; }
+  .pill-btn.vid:not(.add) .ic, .ch-acts:has(.vid):has(.sol) .pill-btn:not(.add) .ic { width: 17px; height: 17px; }
+}
 
 /* Settings — Clean, Grouped, Well-Sized */
 .set-card {

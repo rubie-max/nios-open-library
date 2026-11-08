@@ -43,7 +43,9 @@
     a.href = href;
     return a;
   }
-  function directPdf(href) { return /\.pdf($|[?#])/i.test(href || ""); }
+  function directPdf(href) {
+    return /\.pdf($|[?#])/i.test(href || "") || /selfstudys\.com\/sitepdfs\//i.test(href || "");
+  }
   function ext(href, cls, text) {
     var a = el("a", cls, text);
     a.href = href;
@@ -110,14 +112,28 @@
     var m = s.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?(?:[^#]*&)?v=|embed\/|shorts\/|live\/))([A-Za-z0-9_-]{11})/);
     return m ? m[1] : "";
   }
+  function stockVideo(b, i) {
+    return (b.ch[i] && b.ch[i][2]) || "";
+  }
+  function stockSol(b, i) {
+    return (b.ch[i] && b.ch[i][3]) || "";
+  }
   function overrideOf(kind, b, i) {
     var o = edits[kind] && edits[kind][b.id];
     return o && Object.prototype.hasOwnProperty.call(o, String(i)) ? o[String(i)] : null;
   }
+  function chapterVideo(b, i) {
+    var o = overrideOf("v", b, i);
+    return o === null ? stockVideo(b, i) : o;
+  }
+  function chapterSol(b, i) {
+    var o = overrideOf("s", b, i);
+    return o === null ? stockSol(b, i) : o;
+  }
   function setOverride(kind, b, i, val) {
     if (!edits[kind]) edits[kind] = {};
     if (!edits[kind][b.id]) edits[kind][b.id] = {};
-    if (!val) delete edits[kind][b.id][String(i)];
+    if (val === null) delete edits[kind][b.id][String(i)];
     else edits[kind][b.id][String(i)] = val;
     if (!Object.keys(edits[kind][b.id]).length) delete edits[kind][b.id];
     save("nios-edits", edits);
@@ -143,10 +159,10 @@
     var sheet = document.getElementById("editSheet");
     document.getElementById("editSheetTitle").textContent = b.t + " · Lesson " + (i + 1);
     document.getElementById("editSheetHint").textContent = b.ch[i][0];
-    var v = overrideOf("v", b, i) || "";
+    var v = chapterVideo(b, i);
     document.getElementById("editVid").value = v ? "https://www.youtube.com/watch?v=" + v : "";
     document.getElementById("editVidErr").hidden = true;
-    document.getElementById("editSol").value = overrideOf("s", b, i) || "";
+    document.getElementById("editSol").value = chapterSol(b, i);
     if (sheet && sheet.showModal) sheet.showModal();
   }
 
@@ -199,9 +215,9 @@
 
     var qgrid = el("div", "quick-grid");
     [
-      ["#/papers", "clipboard", "TMA PDFs", "2026 assignments", "#d97706"],
-      ["#/papers", "file", "Sample Papers", "68 question sets", "#7c3aed"],
-      ["#/labs", "flask", "Lab Manuals", "34 practical guides", "#e11d48"],
+      ["#/papers", "clipboard", "Question Papers", "2024, 2022 & PYQs", "#d97706"],
+      ["#/papers", "file", "Solutions & TMA", "Guides & worksheets", "#7c3aed"],
+      ["#/labs", "flask", "Lab Manuals", "Practical guides", "#e11d48"],
       ["#/settings", "download", isInstalled() ? "App Settings" : "Install App", isInstalled() ? "Theme & offline cache" : "Add to home screen", "#0284c7"]
     ].forEach(function (p, idx) {
       var a = internal(p[0], "qcard");
@@ -253,7 +269,7 @@
     app.appendChild(shelf);
 
     var sb = el("div", "stats-bar");
-    [[String(BOOKS.length), "books"], ["2,550", "lesson PDFs"], ["17", "mediums"]].forEach(function (s) {
+    [[String(BOOKS.length), "books"], ["2,341", "video lessons"], ["319", "papers & guides"]].forEach(function (s) {
       var c = el("div", "stat-cell");
       c.appendChild(el("b", null, s[0]));
       c.appendChild(el("span", null, s[1]));
@@ -278,17 +294,21 @@
     var mid = el("div", "subj-mid");
     mid.appendChild(el("b", null, b.t));
     mid.appendChild(el("small", null, b.m + " · " + b.ch.length + (b.ch.length === 1 ? " lesson" : " lessons")));
+    var tags = el("div", "subj-tags");
+    var hasVid = b.ch.some(function (c) { return c[2]; });
+    var hasSol = b.ch.some(function (c) { return c[3]; });
+    if (hasSol) tags.appendChild(el("span", "stag good", "Solutions"));
+    if (hasVid) tags.appendChild(el("span", "stag", "Videos"));
     if (b.extra && b.extra.length) {
-      var tags = el("div", "subj-tags");
       var seen = {};
       b.extra.forEach(function (x) {
-        var lbl = /sample|question/i.test(x[0]) ? "Sample Paper" : /tma|assignment/i.test(x[0]) ? "TMA" : /lab|manual/i.test(x[0]) ? "Lab Manual" : "Guide";
-        if (seen[lbl]) return;
+        var lbl = /question paper/i.test(x[0]) ? "Question Paper" : /sample/i.test(x[0]) ? "Sample Paper" : /tma|assignment/i.test(x[0]) ? "TMA" : /lab|manual/i.test(x[0]) ? "Lab Manual" : "";
+        if (!lbl || seen[lbl]) return;
         seen[lbl] = 1;
-        tags.appendChild(el("span", "stag" + (lbl === "Sample Paper" ? " good" : ""), lbl));
+        tags.appendChild(el("span", "stag" + (/Paper/.test(lbl) ? " good" : ""), lbl));
       });
-      mid.appendChild(tags);
     }
+    if (tags.childNodes.length) mid.appendChild(tags);
     a.appendChild(mid);
 
     var done = readOf(b).length;
@@ -367,10 +387,15 @@
     if (b.extra && b.extra.length) {
       var seen = {};
       b.extra.forEach(function (x) {
-        var label = /sample|question/i.test(x[0]) ? "Sample Paper" : /tma|assignment/i.test(x[0]) ? "TMA PDF" : /lab|manual/i.test(x[0]) ? "Lab Manual" : /guide|lesson/i.test(x[0]) ? "Learner Guide" : x[0];
+        var label = x[0];
+        if (/sample/i.test(label)) label = "Sample Paper";
+        else if (/tma|assignment/i.test(label)) label = "TMA PDF";
+        else if (/lab|manual/i.test(label)) label = "Lab Manual";
+        else if (/guide|lesson/i.test(label)) label = "Learner Guide";
+        else if (/book/i.test(label)) label = "Full Book PDF";
         if (seen[label]) return;
         seen[label] = 1;
-        var eb = ext(x[1], "extra-btn" + (label === "Sample Paper" ? " good" : ""));
+        var eb = ext(x[1], "extra-btn" + (/Paper/.test(label) ? " good" : ""));
         eb.appendChild(icon("file"));
         eb.appendChild(document.createTextNode(label));
         extras.appendChild(eb);
@@ -416,22 +441,24 @@
       pdf.addEventListener("click", function () { setRead(b, i, true); refresh(); });
       acts.appendChild(pdf);
 
-      var vid = overrideOf("v", b, i) || "";
-      var sol = overrideOf("s", b, i) || "";
+      var vid = chapterVideo(b, i);
+      var sol = chapterSol(b, i);
       if (editMode && (!vid || !sol)) li.classList.add("needs");
 
       if (vid || editMode) {
-        var vd = ext(vid ? "https://www.youtube.com/watch?v=" + vid : "#", "pill-btn vid" + (vid ? " custom" : " add"));
+        var vd = ext(vid ? "https://www.youtube.com/watch?v=" + vid : "#", "pill-btn vid" + (overrideOf("v", b, i) !== null ? " custom" : "") + (vid ? "" : " add"));
         vd.appendChild(icon("video"));
         vd.appendChild(document.createTextNode(vid ? "Video" : "Add"));
+        vd.setAttribute("aria-label", (editMode ? "Edit video for " : "YouTube lesson for ") + c[0]);
         if (editMode) vd.addEventListener("click", function (e) { e.preventDefault(); openEdit(b, i); });
         acts.appendChild(vd);
       }
       if (sol || editMode) {
         var solPdf = directPdf(sol);
-        var sv = ext(sol || "#", "pill-btn sol" + (sol ? " custom" : " add"));
+        var sv = ext(sol || "#", "pill-btn sol" + (overrideOf("s", b, i) !== null ? " custom" : "") + (sol ? "" : " add") + (sol && !solPdf ? " web" : ""));
         sv.appendChild(icon(solPdf ? "file" : "bulb"));
-        sv.appendChild(document.createTextNode(!sol ? "Add" : (solPdf ? "PDF" : "Solve")));
+        sv.appendChild(document.createTextNode(!sol ? "Add" : (editMode && solPdf ? "PDF" : "Solve")));
+        sv.setAttribute("aria-label", (editMode ? "Edit solutions for " : "Solutions / Worksheet for ") + c[0]);
         if (editMode) sv.addEventListener("click", function (e) { e.preventDefault(); openEdit(b, i); });
         acts.appendChild(sv);
       }
@@ -447,20 +474,44 @@
   /* ========================================================================
      PAPERS / LAB MANUALS VIEW
      ======================================================================== */
+  var paperFilter = "all";
   function viewPapers(kind) {
     var back = internal("#/", "back-link");
     back.appendChild(icon("back"));
     back.appendChild(document.createTextNode("Home"));
     app.appendChild(back);
     var isLab = kind === "labs";
-    app.appendChild(el("h1", "page-h1", isLab ? "Lab Manuals & Learner Guides" : "Sample Papers & TMA PDFs"));
-    app.appendChild(el("p", "page-lead", isLab ? "Official practical manuals and chapter-wise learner guides from nios.ac.in." : "Official sample question papers and Tutor Marked Assignments (TMA)."));
+    app.appendChild(el("h1", "page-h1", isLab ? "Lab Manuals & Learner Guides" : "Question Papers, Sample Papers & TMA"));
+    app.appendChild(el("p", "page-lead", isLab
+      ? "Official practical manuals, full textbook PDFs and chapter-wise learner guides from nios.ac.in."
+      : "Official 2024 & 2022 board question papers, previous exam papers, sample papers and TMAs."));
+
+    if (!isLab) {
+      var chips = el("div", "chips");
+      [
+        ["all", "All Papers"],
+        ["sec", "Class 10 (Secondary)"],
+        ["sr", "Class 12 (Sr. Secondary)"],
+        ["2024", "2024 & 2022 Papers"],
+        ["sample", "Sample & TMA"]
+      ].forEach(function (f) {
+        var btn = el("button", "chip", f[1]);
+        btn.type = "button";
+        btn.setAttribute("aria-pressed", String(paperFilter === f[0]));
+        btn.addEventListener("click", function () { paperFilter = f[0]; route(); });
+        chips.appendChild(btn);
+      });
+      app.appendChild(chips);
+    }
 
     var list = el("div", "subj-list");
     BOOKS.forEach(function (b) {
+      if (!isLab && (paperFilter === "sec" || paperFilter === "sr") && b.level !== paperFilter) return;
       (b.extra || []).forEach(function (x) {
-        var match = isLab ? /lab|manual|guide/i.test(x[0]) : /sample|tma|question|assignment/i.test(x[0]);
+        var match = isLab ? /lab|manual|guide|book/i.test(x[0]) : /sample|tma|question|assignment/i.test(x[0]);
         if (!match) return;
+        if (!isLab && paperFilter === "2024" && !/2024|2022/.test(x[0])) return;
+        if (!isLab && paperFilter === "sample" && !/sample|tma|assignment/i.test(x[0])) return;
         var row = ext(x[1], "subj-row");
         row.style.setProperty("--c", subjColor(b.t));
         var cd = el("span", "subj-code");
@@ -792,15 +843,15 @@
       return;
     }
     var sol = document.getElementById("editSol").value.trim();
-    setOverride("v", editing.b, editing.i, vid);
-    setOverride("s", editing.b, editing.i, sol);
+    setOverride("v", editing.b, editing.i, vid === stockVideo(editing.b, editing.i) ? null : vid);
+    setOverride("s", editing.b, editing.i, sol === stockSol(editing.b, editing.i) ? null : sol);
     sheet.close();
     route();
   });
   document.getElementById("editReset").addEventListener("click", function () {
     if (!editing) return;
-    setOverride("v", editing.b, editing.i, "");
-    setOverride("s", editing.b, editing.i, "");
+    setOverride("v", editing.b, editing.i, null);
+    setOverride("s", editing.b, editing.i, null);
     sheet.close();
     route();
   });
