@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="16" fill="#f59e0b"/>
+  <rect x="4" y="4" width="56" height="56" rx="13" fill="#0a2540"/>
+  <!-- Rising sun / lamp of learning -->
+  <circle cx="32" cy="15" r="5" fill="#fbbf24"/>
+  <path d="M32 6v3M23 9l2 2M41 9l-2 2" stroke="#fbbf24" stroke-width="2.2" stroke-linecap="round"/>
+  <!-- Open book pages -->
+  <path d="M12 21c7-2.6 13.5-1.8 20 2.2v15.5c-6.5-3.8-13-4.4-20-1.8z" fill="#ffffff"/>
+  <path d="M52 21c-7-2.6-13.5-1.8-20 2.2v15.5c6.5-3.8 13-4.4 20-1.8z" fill="#93c5fd"/>
+  <!-- Gold NIOS badge pill at bottom -->
+  <rect x="10" y="42" width="44" height="15" rx="5" fill="#f59e0b"/>
+  <text x="32" y="53.2" text-anchor="middle" font-family="Segoe UI, Arial, sans-serif" font-weight="900" font-size="12.5" letter-spacing="1.2" fill="#0a2540">NIOS</text>
+</svg>
