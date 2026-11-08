@@ -644,13 +644,15 @@
     });
     app.appendChild(chips);
 
-    var yearFilterEnabled = !isLab && (activeFilter === "question" || activeFilter === "sample");
+    var yearFilterEnabled = !isLab && (activeFilter === "question" || activeFilter === "sample" || activeFilter === "tma");
     if (yearFilterEnabled) {
       var years = {};
       entries.forEach(function (entry) {
         var matchesCategory = activeFilter === "question"
           ? /question/i.test(entry.x[0])
-          : /sample/i.test(entry.x[0]);
+          : activeFilter === "tma"
+            ? /tma|assignment/i.test(entry.x[0])
+            : /sample/i.test(entry.x[0]);
         if (matchesCategory) years[resourceYear(entry.x[0])] = true;
       });
       var yearKeys = Object.keys(years).filter(function (y) { return y !== "other"; }).sort(function (a, b) {
