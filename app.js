@@ -269,7 +269,11 @@
     app.appendChild(shelf);
 
     var sb = el("div", "stats-bar");
-    [[String(BOOKS.length), "books"], ["2,341", "video lessons"], ["319", "papers & guides"]].forEach(function (s) {
+    var videoCount = BOOKS.reduce(function (n, b) {
+      return n + b.ch.filter(function (c) { return !!c[2]; }).length;
+    }, 0);
+    var resourceCount = BOOKS.reduce(function (n, b) { return n + (b.extra || []).length; }, 0);
+    [[String(BOOKS.length), "books"], [videoCount.toLocaleString(), "video lessons"], [resourceCount.toLocaleString(), "extra resources"]].forEach(function (s) {
       var c = el("div", "stat-cell");
       c.appendChild(el("b", null, s[0]));
       c.appendChild(el("span", null, s[1]));
@@ -344,7 +348,9 @@
     a.appendChild(el("strong", null, b.t));
     var meta = [];
     if (showMedium || levelMedium === "All") meta.push(b.m);
-    meta.push(b.ch.length + (b.ch.length === 1 ? " lesson" : " lessons"));
+    meta.push(b.ch.length
+      ? b.ch.length + (b.ch.length === 1 ? " lesson" : " lessons")
+      : (b.extra || []).length + " resources");
     a.appendChild(el("span", "nios-tile-sub", meta.join(" · ")));
     var done = readOf(b).length;
     if (done) {
@@ -440,7 +446,9 @@
     var txt = el("div", "book-hero-txt");
     txt.appendChild(el("small", null, LEVEL_TITLE[b.level] + " · " + b.m + " Medium · Code " + b.code));
     txt.appendChild(el("h1", null, b.t));
-    var subText = el("p", null, b.ch.length + " official lessons · Direct nios.ac.in PDFs");
+    var subText = el("p", null, b.ch.length
+      ? b.ch.length + " official lessons · Direct nios.ac.in PDFs"
+      : (b.extra || []).length + " official resources");
     txt.appendChild(subText);
     bht.appendChild(txt);
     bh.appendChild(bht);
@@ -456,13 +464,9 @@
       var seen = {};
       b.extra.forEach(function (x) {
         var label = x[0];
-        if (/sample/i.test(label)) label = "Sample Paper";
-        else if (/tma|assignment/i.test(label)) label = "TMA PDF";
-        else if (/lab|manual/i.test(label)) label = "Lab Manual";
-        else if (/guide|lesson/i.test(label)) label = "Learner Guide";
-        else if (/book/i.test(label)) label = "Full Book PDF";
-        if (seen[label]) return;
-        seen[label] = 1;
+        var resourceKey = label + "|" + x[1];
+        if (seen[resourceKey]) return;
+        seen[resourceKey] = 1;
         var eb = ext(x[1], "extra-btn");
         eb.appendChild(icon("file"));
         eb.appendChild(document.createTextNode(label));
@@ -483,7 +487,9 @@
       var done = readOf(b);
       var pct = b.ch.length ? Math.round((done.length / b.ch.length) * 100) : 0;
       pfill.style.width = pct + "%";
-      subText.textContent = b.ch.length + " lessons · " + done.length + " read (" + pct + "%)";
+      subText.textContent = b.ch.length
+        ? b.ch.length + " lessons · " + done.length + " read (" + pct + "%)"
+        : (b.extra || []).length + " official resources";
       rows.forEach(function (r) {
         var on = done.indexOf(r.i) !== -1;
         r.num.setAttribute("aria-pressed", String(on));
@@ -530,6 +536,15 @@
         if (editMode) sv.addEventListener("click", function (e) { e.preventDefault(); openEdit(b, i); });
         acts.appendChild(sv);
       }
+      (c[4] || []).forEach(function (extraResource) {
+        if (!extraResource[1] || extraResource[1] === sol) return;
+        var more = ext(extraResource[1], "pill-btn sol");
+        more.title = extraResource[0];
+        more.setAttribute("aria-label", extraResource[0] + " for " + c[0]);
+        more.appendChild(icon("file"));
+        more.appendChild(document.createTextNode(extraResource[0] === "Worksheet" ? "Work" : "Guide"));
+        acts.appendChild(more);
+      });
 
       li.appendChild(acts);
       rows.push({ num: num, i: i, li: li });
@@ -543,7 +558,13 @@
      PAPERS / LAB MANUALS VIEW
      ======================================================================== */
   var paperFilter = "all";
+  var paperYearFilter = "all";
   var labFilter = "all";
+  function resourceYear(label) {
+    if (/current/i.test(label)) return "current";
+    var match = label.match(/\b((?:19|20)\d{2})\b/);
+    return match ? match[1] : "other";
+  }
   function viewPapers(kind) {
     var back = internal("#/", "back-link");
     back.appendChild(icon("back"));
@@ -554,6 +575,15 @@
     app.appendChild(el("p", "page-lead", isLab
       ? "Official learner guides, lab manuals and practical material."
       : "Official question papers, sample papers and tutor-marked assignments."));
+    if (!isLab) {
+      var archive = ext(
+        "https://nios.ac.in/student-information-section/question-paper-of-previous-year-examination-academic.aspx",
+        "official-archive-link"
+      );
+      archive.appendChild(icon("clipboard"));
+      archive.appendChild(document.createTextNode("Browse official question-paper archive · 2012–2023"));
+      app.appendChild(archive);
+    }
 
     var sectionNav = el("nav", "resource-switch");
     var paperLink = internal("#/papers", null, "Papers & TMA");
@@ -608,6 +638,29 @@
       chips.appendChild(btn);
     });
     app.appendChild(chips);
+
+    if (!isLab) {
+      var years = {};
+      entries.forEach(function (entry) { years[resourceYear(entry.x[0])] = true; });
+      var yearKeys = Object.keys(years).filter(function (y) { return y !== "other"; }).sort(function (a, b) {
+        if (a === "current") return -1;
+        if (b === "current") return 1;
+        return Number(b) - Number(a);
+      });
+      if (yearKeys.length) {
+        var yearChips = el("div", "resource-filters year-filters");
+        [["all", "All years"]].concat(yearKeys.map(function (y) {
+          return [y, y === "current" ? "Current" : y];
+        })).forEach(function (f) {
+          var yearBtn = el("button", "resource-filter", f[1]);
+          yearBtn.type = "button";
+          yearBtn.setAttribute("aria-pressed", String(paperYearFilter === f[0]));
+          yearBtn.addEventListener("click", function () { paperYearFilter = f[0]; route(); });
+          yearChips.appendChild(yearBtn);
+        });
+        app.appendChild(yearChips);
+      }
+    }
     entries = entries.filter(function (entry) {
       if (activeFilter === "sec" || activeFilter === "sr") return entry.b.level === activeFilter;
       if (activeFilter === "question") return /question/i.test(entry.x[0]);
@@ -618,10 +671,13 @@
       if (activeFilter === "book") return /book/i.test(entry.x[0]);
       return true;
     });
+    if (!isLab && paperYearFilter !== "all") {
+      entries = entries.filter(function (entry) { return resourceYear(entry.x[0]) === paperYearFilter; });
+    }
 
     var resultHead = el("div", "resource-result-head");
-    resultHead.appendChild(el("b", null, isLab ? "Study resources" : "Available PDFs"));
-    resultHead.appendChild(el("span", null, entries.length + (entries.length === 1 ? " file" : " files")));
+    resultHead.appendChild(el("b", null, isLab ? "Study resources" : "Available resources"));
+    resultHead.appendChild(el("span", null, entries.length + (entries.length === 1 ? " resource" : " resources")));
     app.appendChild(resultHead);
 
     var tiles = el("div", "nios-tiles resource-tiles");
@@ -634,7 +690,7 @@
       cover.appendChild(el("span", "nios-cover-code", b.code));
       var badge = el("span", "nios-tile-badge");
       badge.appendChild(icon("file"));
-      badge.appendChild(document.createTextNode("PDF"));
+      badge.appendChild(document.createTextNode(directPdf(x[1]) ? "PDF" : "LINK"));
       cover.appendChild(badge);
       tile.appendChild(cover);
       tile.appendChild(el("strong", null, b.t));

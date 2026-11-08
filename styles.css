@@ -408,12 +408,19 @@ body:has(.medium-sheet[open]) .dock { visibility: hidden; }
   border-radius: 11px; color: var(--muted); text-align: center; font-size: 12px; font-weight: 800;
 }
 .resource-switch a[aria-current="page"] { background: var(--surface); color: var(--ink); outline: 1px solid var(--line); }
+.official-archive-link {
+  display: flex; align-items: center; gap: 8px; margin: -5px 0 13px; padding: 10px 12px;
+  border: 1px solid var(--line); border-radius: 12px; background: var(--surface);
+  color: var(--accent); font-size: 12px; font-weight: 800;
+}
+.official-archive-link .ic { width: 17px; height: 17px; }
 .resource-filters {
   display: flex; gap: 7px; overflow-x: auto; scrollbar-width: none;
   margin: 0 -14px 15px 0; padding: 1px 20px 2px 1px;
   mask-image: linear-gradient(90deg, #000 calc(100% - 24px), transparent);
 }
 .resource-filters::-webkit-scrollbar { display: none; }
+.resource-filters.year-filters { margin-top: -8px; }
 .resource-filter {
   flex: none; min-height: 36px; display: inline-flex; align-items: center; gap: 6px;
   padding: 0 11px; border: 1px solid var(--line); border-radius: 99px;
